@@ -5,6 +5,7 @@ import { FiAlertCircle, FiCheckCircle, FiClock, FiTrendingUp } from 'react-icons
 import StatCard from '@/components/StatCard';
 import CrackCard from '@/components/CrackCard';
 import { Crack } from '@/lib/types';
+import { fetchCracks } from '@/lib/api-client';
 
 // Mock data for demonstration
 const mockCracks: Crack[] = [
@@ -73,13 +74,10 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate data loading
-    const timer = setTimeout(() => {
-      setCracks(mockCracks);
-      setLoading(false);
-    }, 500);
-
-    return () => clearTimeout(timer);
+    fetchCracks({ limit: 6 })
+      .then(setCracks)
+      .catch((error) => console.error('Unable to load cracks from Supabase:', error))
+      .finally(() => setLoading(false));
   }, []);
 
   const stats = {

@@ -1,55 +1,29 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { collection, getDocs } from 'firebase/firestore';
+import { NextResponse } from 'next/server';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
-export async function GET(request: NextRequest) {
+// Prevent Next.js from attempting a database request while building.
+export const dynamic = 'force-dynamic';
+
+const types = ['longitudinal', 'transverse', 'alligator', 'edge', 'reflection', 'other'];
+const statuses = ['new', 'assigned', 'in-progress', 'resolved'];
+
+export async function GET() {
   try {
-    const snapshot = await getDocs(collection(db, 'cracks'));
-    const cracks = snapshot.docs.map((doc) => doc.data());
-
-    // Calculate statistics
-    const stats = {
-      totalCracks: cracks.length,
-      criticalCracks: cracks.filter((c) => c.severity === 'critical').length,
-      highCracks: cracks.filter((c) => c.severity === 'high').length,
-      mediumCracks: cracks.filter((c) => c.severity === 'medium').length,
-      lowCracks: cracks.filter((c) => c.severity === 'low').length,
-      resolvedCracks: cracks.filter((c) => c.status === 'resolved').length,
-      inProgressCracks: cracks.filter((c) => c.status === 'in-progress').length,
-    };
-
-    // Cracks by type
-    const cracksByType = {
-      longitudinal: cracks.filter((c) => c.crackType === 'longitudinal').length,
-      transverse: cracks.filter((c) => c.crackType === 'transverse').length,
-      alligator: cracks.filter((c) => c.crackType === 'alligator').length,
-      edge: cracks.filter((c) => c.crackType === 'edge').length,
-      reflection: cracks.filter((c) => c.crackType === 'reflection').length,
-      other: cracks.filter((c) => c.crackType === 'other').length,
-    };
-
-    // Cracks by status
-    const cracksByStatus = {
-      new: cracks.filter((c) => c.status === 'new').length,
-      assigned: cracks.filter((c) => c.status === 'assigned').length,
-      inProgress: cracks.filter((c) => c.status === 'in-progress').length,
-      resolved: cracks.filter((c) => c.status === 'resolved').length,
-    };
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        ...stats,
-        cracksByType,
-        cracksByStatus,
-        timestamp: new Date().toISOString(),
-      },
-    });
+    const { data: cracks, error } = await getSupabaseAdmin().from('crack_records').select('severity, status, crack_type');
+    if (error) throw error;
+    const records = cracks || [];
+    const count = (field: string, value: string) => records.filter((record: any) => record[field] === value).length;
+    return NextResponse.json({ success: true, data: {
+      totalCracks: records.length,
+      criticalCracks: count('severity', 'critical'), highCracks: count('severity', 'high'),
+      mediumCracks: count('severity', 'medium'), lowCracks: count('severity', 'low'),
+      resolvedCracks: count('status', 'resolved'), inProgressCracks: count('status', 'in-progress'),
+      cracksByType: Object.fromEntries(types.map((type) => [type, count('crack_type', type)])),
+      cracksByStatus: Object.fromEntries(statuses.map((status) => [status, count('status', status)])),
+      timestamp: new Date().toISOString(),
+    } });
   } catch (error) {
     console.error('Error fetching analytics:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch analytics' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: 'Failed to fetch analytics' }, { status: 500 });
   }
 }

@@ -3,11 +3,11 @@
 import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { FiMapPin, FiCalendar, FiAlertCircle } from 'react-icons/fi';
+import { FiMapPin, FiCalendar, FiImage } from 'react-icons/fi';
 
 interface CrackCardProps {
   id: string;
-  imageUrl: string;
+  imageUrl?: string | null;
   location: string;
   crackType: string;
   severity: 'low' | 'medium' | 'high' | 'critical';
@@ -41,12 +41,19 @@ export default function CrackCard({
       <div className="card cursor-pointer hover:shadow-lg transition-shadow">
         {/* Image */}
         <div className="relative w-full h-48 rounded-lg overflow-hidden mb-4">
-          <Image
-            src={imageUrl}
-            alt={`Crack at ${location}`}
-            fill
-            className="object-cover"
-          />
+          {imageUrl ? (
+            <Image
+              src={imageUrl}
+              alt={`Crack at ${location}`}
+              fill
+              className="object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gray-100 flex flex-col items-center justify-center text-gray-400">
+              <FiImage size={28} />
+              <span className="text-xs mt-2">No image available</span>
+            </div>
+          )}
           {/* Severity Badge */}
           <div className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-semibold ${config.bg} ${config.text}`}>
             {config.label}

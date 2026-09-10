@@ -19,6 +19,9 @@ export async function fetchCracks(filters?: CrackFilter & { limit?: number }): P
     if (filters?.crackType) {
       params.append('type', Array.isArray(filters.crackType) ? filters.crackType[0] : filters.crackType);
     }
+    if (filters?.location) {
+      params.append('location', filters.location);
+    }
     if (filters?.limit) {
       params.append('limit', filters.limit.toString());
     }

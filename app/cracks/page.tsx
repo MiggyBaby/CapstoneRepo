@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { FiFilter, FiDownload, FiSearch } from 'react-icons/fi';
 import CrackCard from '@/components/CrackCard';
 import { Crack, Severity, CrackType } from '@/lib/types';
+import { fetchCracks } from '@/lib/api-client';
 
 // Mock data
 const mockCracks: Crack[] = [
@@ -46,6 +47,8 @@ const mockCracks: Crack[] = [
 ];
 
 export default function CracksPage() {
+  const [cracks, setCracks] = useState<Crack[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSeverity, setSelectedSeverity] = useState<Severity | 'all'>('all');
   const [selectedType, setSelectedType] = useState<CrackType | 'all'>('all');
@@ -53,7 +56,14 @@ export default function CracksPage() {
   const severities: Severity[] = ['low', 'medium', 'high', 'critical'];
   const crackTypes: CrackType[] = ['longitudinal', 'transverse', 'alligator', 'edge', 'reflection', 'other'];
 
-  const filteredCracks = mockCracks.filter((crack) => {
+  useEffect(() => {
+    fetchCracks()
+      .then(setCracks)
+      .catch((error) => console.error('Unable to load cracks from Supabase:', error))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const filteredCracks = cracks.filter((crack) => {
     const matchesSearch =
       crack.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
       crack.crackType.includes(searchTerm.toLowerCase());
@@ -71,7 +81,7 @@ export default function CracksPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Crack Detection</h1>
           <p className="text-gray-600 mt-1">
-            Total detected: <span className="font-semibold text-primary-600">{mockCracks.length}</span>
+            Total detected: <span className="font-semibold text-primary-600">{cracks.length}</span>
           </p>
         </div>
         <button className="btn-primary flex items-center space-x-2">
@@ -164,7 +174,11 @@ export default function CracksPage() {
           Results: {filteredCracks.length} crack{filteredCracks.length !== 1 ? 's' : ''} found
         </h2>
 
-        {filteredCracks.length > 0 ? (
+        {loading ? (
+          <div className="card text-center py-12">
+            <p className="text-gray-500 text-lg">Loading crack records...</p>
+          </div>
+        ) : filteredCracks.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredCracks.map((crack) => (
               <CrackCard
