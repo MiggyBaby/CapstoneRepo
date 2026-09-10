@@ -105,8 +105,8 @@ CapstoneRepo/
 | **Frontend** | Next.js 14 + React 18 |
 | **Language** | TypeScript |
 | **Styling** | Tailwind CSS |
-| **Backend** | Firebase Firestore |
-| **Storage** | Firebase Storage |
+| **Backend** | SupaBase + PostgreSQL|
+| **Storage** | SuperBase Storage |
 | **Icons** | React Icons |
 | **Maps** | Leaflet (coming soon) |
 | **Deployment** | Vercel |
