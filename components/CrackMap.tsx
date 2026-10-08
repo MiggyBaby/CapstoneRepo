@@ -14,15 +14,25 @@ const severityConfig = {
   critical: { color: 'bg-red-500', label: 'Critical', mapColor: '#ef4444' },
 };
 
+const MINDANAO_CENTER: L.LatLngTuple = [7.7, 124.2];
+const MINDANAO_BOUNDS = L.latLngBounds([5.2, 121.3], [10.0, 126.7]);
+
+function isInMindanao(crack: Crack) {
+  return MINDANAO_BOUNDS.contains([crack.coordinates.lat, crack.coordinates.lng]);
+}
+
 function MapBounds({ cracks }: { cracks: Crack[] }) {
   const map = useMap();
 
   useEffect(() => {
-    if (!cracks.length) return;
+    if (!cracks.length) {
+      map.fitBounds(MINDANAO_BOUNDS, { padding: [16, 16] });
+      return;
+    }
 
     const bounds = L.latLngBounds(cracks.map((crack) => [crack.coordinates.lat, crack.coordinates.lng]));
     if (bounds.isValid()) {
-      map.fitBounds(bounds.pad(0.35));
+      map.fitBounds(bounds.pad(0.15), { padding: [16, 16], maxZoom: 8 });
     }
   }, [cracks, map]);
 
@@ -42,15 +52,21 @@ function createMarkerIcon(color: string) {
 export default function CrackMap() {
   const [cracks, setCracks] = useState<Crack[]>([]);
   const [selectedCrack, setSelectedCrack] = useState<Crack | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchCracks({ limit: 200 })
       .then((data) => {
-        setCracks(data);
-        setSelectedCrack(data[0] ?? null);
+        const mindanaoCracks = data.filter(isInMindanao);
+        setCracks(mindanaoCracks);
+        setSelectedCrack(mindanaoCracks[0] ?? null);
       })
-      .catch((error) => console.error('Unable to load crack map data from Supabase:', error))
+      .catch((error) => {
+        setCracks([]);
+        setSelectedCrack(null);
+        setLoadError(error instanceof Error ? error.message : 'Unable to load crack map data.');
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -65,40 +81,56 @@ export default function CrackMap() {
                 <p className="text-gray-600 font-medium mt-4">Loading map data...</p>
               </div>
             </div>
-          ) : cracks.length === 0 ? (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <FiInfo className="mx-auto text-blue-400 mb-4" size={48} />
-                <p className="text-gray-600 font-medium">No cracks available</p>
-                <p className="text-gray-500 text-sm mt-2">New detections will appear here once they are uploaded.</p>
-              </div>
-            </div>
           ) : (
-            <MapContainer center={[14.5995, 120.9842]} zoom={11} scrollWheelZoom className="h-full w-full">
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-              <MapBounds cracks={cracks} />
-              {cracks.map((crack) => (
-                <Marker
-                  key={crack.id}
-                  position={[crack.coordinates.lat, crack.coordinates.lng]}
-                  icon={createMarkerIcon(severityConfig[crack.severity].mapColor)}
-                  eventHandlers={{ click: () => setSelectedCrack(crack) }}
-                >
-                  <Popup>
-                    <div className="space-y-1">
-                      <p className="font-bold text-gray-900">{crack.location}</p>
-                      <p className="text-sm capitalize text-gray-700">{crack.crackType}</p>
-                      <span className={`inline-block px-2 py-1 rounded text-xs font-semibold text-white ${severityConfig[crack.severity].color}`}>
-                        {severityConfig[crack.severity].label}
-                      </span>
+            <div className="relative flex-1">
+              <MapContainer
+                center={MINDANAO_CENTER}
+                zoom={7}
+                minZoom={6}
+                maxBounds={MINDANAO_BOUNDS}
+                maxBoundsViscosity={1}
+                scrollWheelZoom
+                className="h-full w-full"
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <MapBounds cracks={cracks} />
+                {cracks.map((crack) => (
+                  <Marker
+                    key={crack.id}
+                    position={[crack.coordinates.lat, crack.coordinates.lng]}
+                    icon={createMarkerIcon(severityConfig[crack.severity].mapColor)}
+                    eventHandlers={{ click: () => setSelectedCrack(crack) }}
+                  >
+                    <Popup>
+                      <div className="space-y-1">
+                        <p className="font-bold text-gray-900">{crack.location}</p>
+                        <p className="text-sm capitalize text-gray-700">{crack.crackType}</p>
+                        <span className={`inline-block px-2 py-1 rounded text-xs font-semibold text-white ${severityConfig[crack.severity].color}`}>
+                          {severityConfig[crack.severity].label}
+                        </span>
+                      </div>
+                    </Popup>
+                  </Marker>
+                ))}
+              </MapContainer>
+
+              {(loadError || cracks.length === 0) && (
+                <div className="absolute inset-x-4 top-4 z-[400] rounded-md border border-blue-100 bg-white/95 px-4 py-3 shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <FiInfo className="mt-0.5 shrink-0 text-blue-500" size={20} />
+                    <div>
+                      <p className="font-semibold text-gray-900">Mindanao map view</p>
+                      <p className="text-sm text-gray-600">
+                        {loadError || 'No crack detections are currently plotted inside Mindanao.'}
+                      </p>
                     </div>
-                  </Popup>
-                </Marker>
-              ))}
-            </MapContainer>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
           <div className="px-6 py-4 border-t border-gray-200 bg-white">

@@ -5,6 +5,8 @@ export const dynamic = 'force-dynamic';
 
 interface Params { id: string }
 
+type RouteContext = { params: Promise<Params> };
+
 function toCrack(record: any) {
   return {
     id: record.id, location: record.location,
@@ -17,9 +19,10 @@ function toCrack(record: any) {
   };
 }
 
-export async function GET(_: NextRequest, { params }: { params: Params }) {
+export async function GET(_: NextRequest, { params }: RouteContext) {
   try {
-    const { data, error } = await getSupabaseAdmin().from('crack_records').select('*').eq('id', params.id).maybeSingle();
+    const { id } = await params;
+    const { data, error } = await getSupabaseAdmin().from('crack_records').select('*').eq('id', id).maybeSingle();
     if (error) throw error;
     if (!data) return NextResponse.json({ success: false, error: 'Crack not found' }, { status: 404 });
     return NextResponse.json({ success: true, data: toCrack(data) });
@@ -29,8 +32,9 @@ export async function GET(_: NextRequest, { params }: { params: Params }) {
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: Params }) {
+export async function PUT(request: NextRequest, { params }: RouteContext) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
     const fields: Record<string, string> = {
@@ -44,7 +48,7 @@ export async function PUT(request: NextRequest, { params }: { params: Params }) 
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) return NextResponse.json({ success: false, error: 'Coordinates must contain numeric lat and lng values' }, { status: 400 });
       updates.latitude = lat; updates.longitude = lng; updates.coordinates = `POINT(${lng} ${lat})`;
     }
-    const { data, error } = await getSupabaseAdmin().from('cracks').update(updates).eq('id', params.id).select().maybeSingle();
+    const { data, error } = await getSupabaseAdmin().from('cracks').update(updates).eq('id', id).select().maybeSingle();
     if (error) throw error;
     if (!data) return NextResponse.json({ success: false, error: 'Crack not found' }, { status: 404 });
     return NextResponse.json({ success: true, data: toCrack(data), message: 'Crack updated successfully' });
@@ -54,9 +58,10 @@ export async function PUT(request: NextRequest, { params }: { params: Params }) 
   }
 }
 
-export async function DELETE(_: NextRequest, { params }: { params: Params }) {
+export async function DELETE(_: NextRequest, { params }: RouteContext) {
   try {
-    const { error, count } = await getSupabaseAdmin().from('cracks').delete({ count: 'exact' }).eq('id', params.id);
+    const { id } = await params;
+    const { error, count } = await getSupabaseAdmin().from('cracks').delete({ count: 'exact' }).eq('id', id);
     if (error) throw error;
     if (!count) return NextResponse.json({ success: false, error: 'Crack not found' }, { status: 404 });
     return NextResponse.json({ success: true, message: 'Crack deleted successfully' });

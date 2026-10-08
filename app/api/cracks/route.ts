@@ -20,6 +20,12 @@ function toCrack(record: any) {
 
 export async function GET(request: NextRequest) {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseSecretKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
+    if (!supabaseUrl || !supabaseSecretKey) {
+      return NextResponse.json({ success: true, data: [], count: 0 });
+    }
+
     const severity = request.nextUrl.searchParams.get('severity');
     const crackType = request.nextUrl.searchParams.get('type');
     const location = request.nextUrl.searchParams.get('location');

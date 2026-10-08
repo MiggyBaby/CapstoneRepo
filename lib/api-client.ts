@@ -10,31 +10,37 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 // ===== Cracks API =====
 
 export async function fetchCracks(filters?: CrackFilter & { limit?: number }): Promise<Crack[]> {
-  try {
-    const params = new URLSearchParams();
+  const params = new URLSearchParams();
 
-    if (filters?.severity) {
-      params.append('severity', Array.isArray(filters.severity) ? filters.severity[0] : filters.severity);
-    }
-    if (filters?.crackType) {
-      params.append('type', Array.isArray(filters.crackType) ? filters.crackType[0] : filters.crackType);
-    }
-    if (filters?.location) {
-      params.append('location', filters.location);
-    }
-    if (filters?.limit) {
-      params.append('limit', filters.limit.toString());
-    }
-
-    const response = await fetch(`${API_URL}/cracks?${params}`);
-    if (!response.ok) throw new Error('Failed to fetch cracks');
-
-    const data = await response.json();
-    return data.data || [];
-  } catch (error) {
-    console.error('Error fetching cracks:', error);
-    throw error;
+  if (filters?.severity) {
+    params.append('severity', Array.isArray(filters.severity) ? filters.severity[0] : filters.severity);
   }
+  if (filters?.crackType) {
+    params.append('type', Array.isArray(filters.crackType) ? filters.crackType[0] : filters.crackType);
+  }
+  if (filters?.location) {
+    params.append('location', filters.location);
+  }
+  if (filters?.limit) {
+    params.append('limit', filters.limit.toString());
+  }
+
+  const query = params.toString();
+  const response = await fetch(`${API_URL}/cracks${query ? `?${query}` : ''}`);
+
+  if (!response.ok) {
+    let message = 'Failed to fetch cracks';
+    try {
+      const data = await response.json();
+      if (data?.error) message = data.error;
+    } catch {
+      // Keep the generic message when the server does not return JSON.
+    }
+    throw new Error(message);
+  }
+
+  const data = await response.json();
+  return data.data || [];
 }
 
 export async function fetchCrackById(id: string): Promise<Crack> {

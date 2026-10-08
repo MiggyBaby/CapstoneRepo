@@ -2,13 +2,13 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { FiHome, FiMap, FiBarChart2, FiSettings, FiChevronDown, FiImage } from 'react-icons/fi';
+import { FiHome, FiMap, FiBarChart2, FiSettings, FiChevronDown, FiImage, FiCheckSquare } from 'react-icons/fi';
 import { GiRoad } from 'react-icons/gi';
 
 interface MenuItem {
   label: string;
   href: string;
-  iconName: 'home' | 'crack' | 'map' | 'chart' | 'gallery' | 'settings';
+  iconName: 'home' | 'crack' | 'map' | 'chart' | 'gallery' | 'checklist' | 'settings';
 }
 
 const getIcon = (iconName: string) => {
@@ -23,6 +23,8 @@ const getIcon = (iconName: string) => {
       return <FiBarChart2 size={20} className="flex-shrink-0" />;
     case 'gallery':
       return <FiImage size={20} className="flex-shrink-0" />;
+    case 'checklist':
+      return <FiCheckSquare size={20} className="flex-shrink-0" />;
     case 'settings':
       return <FiSettings size={20} className="flex-shrink-0" />;
     default:
@@ -58,6 +60,11 @@ export default function Sidebar() {
       label: 'Gallery',
       href: '/gallery',
       iconName: 'gallery',
+    },
+    {
+      label: 'Build Checklist',
+      href: '/checklist',
+      iconName: 'checklist',
     },
     {
       label: 'Settings',

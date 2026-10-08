@@ -9,6 +9,20 @@ const statuses = ['new', 'assigned', 'in-progress', 'resolved'];
 
 export async function GET() {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseSecretKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
+    if (!supabaseUrl || !supabaseSecretKey) {
+      return NextResponse.json({ success: true, data: {
+        totalCracks: 0,
+        criticalCracks: 0, highCracks: 0,
+        mediumCracks: 0, lowCracks: 0,
+        resolvedCracks: 0, inProgressCracks: 0,
+        cracksByType: Object.fromEntries(types.map((type) => [type, 0])),
+        cracksByStatus: Object.fromEntries(statuses.map((status) => [status, 0])),
+        timestamp: new Date().toISOString(),
+      } });
+    }
+
     const { data: cracks, error } = await getSupabaseAdmin().from('crack_records').select('severity, status, crack_type');
     if (error) throw error;
     const records = cracks || [];
