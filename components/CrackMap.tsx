@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { FiInfo, FiX } from 'react-icons/fi';
 import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -16,6 +17,35 @@ const severityConfig = {
 
 const MINDANAO_CENTER: L.LatLngTuple = [7.7, 124.2];
 const MINDANAO_BOUNDS = L.latLngBounds([5.2, 121.3], [10.0, 126.7]);
+
+function getDemoDetailEntries(crack: Crack) {
+  const roadSection = crack.location.includes(',') ? crack.location.split(',')[0].trim() : 'Road Section';
+  const landmark = crack.location.includes(',') ? crack.location.split(',').slice(1).join(',').trim() : 'Nearby landmark';
+  const defectLabel = crack.crackType.charAt(0).toUpperCase() + crack.crackType.slice(1);
+  const quantityMeters = Math.max(8, Math.round((crack.width ?? 1) * 16 + (crack.length ?? 30) / 10));
+  const actionTaken = crack.severity === 'critical' || crack.severity === 'high'
+    ? 'Routine maintenance and quick response first; if the defect spans the entire stretch, it must be endorsed to planning for reblocking, project treatment, or a bigger funding request.'
+    : 'Routine maintenance and rectification. Minor or major is not written here; it is a routine defect and will be repaired through fast response and palliative works.';
+
+  return [
+    { label: 'Road section', value: roadSection },
+    { label: 'Landmark', value: landmark || 'Routine inspection area' },
+    {
+      label: 'Defect',
+      value: `${defectLabel} crack observed on the pavement edge and lane surface. Surface distress is localized and follows routine maintenance repair procedures.`,
+    },
+    { label: 'Action taken', value: actionTaken },
+    { label: 'Quantity', value: `${quantityMeters} linear meters` },
+    {
+      label: 'Date & Time',
+      value: new Date(crack.detectedAt as string).toLocaleString(),
+    },
+    {
+      label: 'BEFORE / DURING / AFTER',
+      value: 'BEFORE: visible crack with surface deterioration. DURING: sealing, patching, and temporary lane protection. AFTER: repaired surface, compacted patch, and monitoring for recurrence.',
+    },
+  ];
+}
 
 function isInMindanao(crack: Crack) {
   return MINDANAO_BOUNDS.contains([crack.coordinates.lat, crack.coordinates.lng]);
@@ -173,36 +203,19 @@ export default function CrackMap() {
                 </p>
               </div>
 
-              <div>
-                <p className="text-xs text-gray-600 uppercase tracking-wide font-medium">Type</p>
-                <p className="text-sm font-bold text-gray-900 mt-1 capitalize">{selectedCrack.crackType}</p>
-              </div>
-
-              <div>
-                <p className="text-xs text-gray-600 uppercase tracking-wide font-medium">Severity</p>
-                <div className="mt-1">
-                  <span
-                    className={`inline-block px-2 py-1 rounded text-xs font-semibold ${severityConfig[selectedCrack.severity].color} text-white`}
-                  >
-                    {severityConfig[selectedCrack.severity].label}
-                  </span>
-                </div>
-              </div>
-
-              <div>
-                <p className="text-xs text-gray-600 uppercase tracking-wide font-medium">Status</p>
-                <p className="text-sm font-bold text-gray-900 mt-1 capitalize">{selectedCrack.status}</p>
-              </div>
-
-              <div>
-                <p className="text-xs text-gray-600 uppercase tracking-wide font-medium">Detected</p>
-                <p className="text-sm font-bold text-gray-900 mt-1">
-                  {new Date(selectedCrack.detectedAt as string).toLocaleDateString()}
-                </p>
+              <div className="space-y-3">
+                {getDemoDetailEntries(selectedCrack).map(({ label, value }) => (
+                  <div key={label} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-600">{label}</p>
+                    <p className="mt-1 text-sm text-gray-800">{value}</p>
+                  </div>
+                ))}
               </div>
             </div>
 
-            <button className="w-full btn-primary mt-4">View Full Details</button>
+            <Link href={`/cracks/${selectedCrack.id}`} className="w-full btn-primary mt-4 inline-flex items-center justify-center">
+              View Full Details
+            </Link>
           </div>
         ) : (
           <div className="card h-full flex items-center justify-center">
