@@ -31,6 +31,160 @@ body {
   color: #1f2937;
 }
 
+html.dark body {
+  background-color: #111827;
+  color: #f3f4f6;
+}
+
+html.dark .bg-white {
+  background-color: #1f2937;
+}
+
+html.dark .bg-gray-50 {
+  background-color: #111827;
+}
+
+html.dark .bg-gray-100 {
+  background-color: #374151;
+}
+
+html.dark .text-gray-900,
+html.dark .text-gray-800 {
+  color: #f9fafb;
+}
+
+html.dark .text-gray-700,
+html.dark .text-gray-600 {
+  color: #d1d5db;
+}
+
+html.dark .text-gray-500 {
+  color: #9ca3af;
+}
+
+html.dark .border-gray-100,
+html.dark .border-gray-200,
+html.dark .border-gray-300 {
+  border-color: #4b5563;
+}
+
+html.dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #4b5563;
+}
+
+html.dark .card {
+  background-color: #1f2937;
+}
+
+html.dark .card-header {
+  border-color: #4b5563;
+}
+
+html.dark input:not([type='checkbox']),
+html.dark select,
+html.dark textarea {
+  background-color: #1f2937;
+  border-color: #6b7280;
+  color: #f9fafb;
+  color-scheme: dark;
+}
+
+html.dark select option {
+  background-color: #1f2937;
+  color: #f9fafb;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #9ca3af;
+}
+
+html.dark .bg-green-100 {
+  background-color: #14532d;
+}
+
+html.dark .text-green-800 {
+  color: #bbf7d0;
+}
+
+html.dark .bg-yellow-100 {
+  background-color: #713f12;
+}
+
+html.dark .text-yellow-800 {
+  color: #fef08a;
+}
+
+html.dark .bg-red-50 {
+  background-color: #450a0a;
+}
+
+html.dark .bg-red-100 {
+  background-color: #7f1d1d;
+}
+
+html.dark .text-red-700,
+html.dark .text-red-800 {
+  color: #fecaca;
+}
+
+html.dark .text-primary-500,
+html.dark .text-primary-600,
+html.dark .text-primary-700,
+html.dark .text-primary-900,
+html.dark .text-blue-500 {
+  color: #bfdbfe;
+}
+
+html.dark .text-secondary-500,
+html.dark .text-secondary-600,
+html.dark .text-red-600 {
+  color: #fca5a5;
+}
+
+html.dark .text-teal-700,
+html.dark .text-teal-800 {
+  color: #5eead4;
+}
+
+html.dark .text-green-600 {
+  color: #86efac;
+}
+
+html.dark .text-yellow-600 {
+  color: #fde047;
+}
+
+html.dark .text-orange-800,
+html.dark .text-amber-800,
+html.dark .text-amber-900,
+html.dark .text-amber-950,
+html.dark .text-emerald-800 {
+  color: #fde68a;
+}
+
+html.dark .bg-blue-100,
+html.dark .bg-primary-50,
+html.dark .bg-primary-100 {
+  background-color: #1e3a5f;
+}
+
+html.dark .bg-emerald-100,
+html.dark .bg-green-100 {
+  background-color: #14532d;
+}
+
+html.dark .bg-amber-50,
+html.dark .bg-amber-100,
+html.dark .bg-orange-100 {
+  background-color: #422006;
+}
+
+html.dark .bg-teal-50,
+html.dark .bg-teal-100 {
+  background-color: #134e4a;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

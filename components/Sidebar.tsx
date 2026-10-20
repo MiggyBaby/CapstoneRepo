@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { FiHome, FiMap, FiBarChart2, FiSettings, FiChevronDown, FiImage, FiFileText } from 'react-icons/fi';
 import { GiRoad } from 'react-icons/gi';
 
@@ -81,10 +82,13 @@ export default function Sidebar() {
     >
       {/* Logo */}
       <div className="p-6 flex items-center justify-between">
-        {isOpen && <h2 className="text-xl font-bold">Road Cracks</h2>}
+        <div className="flex min-w-0 items-center gap-3">
+          <Image src="/images/logo.png" alt="DPWH logo" width={64} height={64} priority unoptimized className="h-16 w-16 shrink-0 object-contain" />
+          {isOpen && <h2 className="min-w-0 flex-1 whitespace-normal text-sm font-bold leading-tight">Road Cracks</h2>}
+        </div>
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="p-2 rounded hover:bg-primary-600 transition"
+          className="shrink-0 rounded p-2 hover:bg-primary-600 transition"
         >
           <FiChevronDown size={20} />
         </button>
