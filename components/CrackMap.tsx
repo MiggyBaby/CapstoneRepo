@@ -7,6 +7,8 @@ import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { Crack } from '@/lib/types';
 import { fetchCracks } from '@/lib/api-client';
+import { getCrackTypeDetails } from '@/lib/crack-types';
+import { getCrackImageUrl } from '@/lib/crack-images';
 
 const severityConfig = {
   low: { color: 'bg-green-500', label: 'Low', mapColor: '#22c55e' },
@@ -21,7 +23,7 @@ const MINDANAO_BOUNDS = L.latLngBounds([5.2, 121.3], [10.0, 126.7]);
 function getDemoDetailEntries(crack: Crack) {
   const roadSection = crack.location.includes(',') ? crack.location.split(',')[0].trim() : 'Road Section';
   const landmark = crack.location.includes(',') ? crack.location.split(',').slice(1).join(',').trim() : 'Nearby landmark';
-  const defectLabel = crack.crackType.charAt(0).toUpperCase() + crack.crackType.slice(1);
+  const defect = getCrackTypeDetails(crack.crackType);
   const quantityMeters = Math.max(8, Math.round((crack.width ?? 1) * 16 + (crack.length ?? 30) / 10));
   const actionTaken = crack.severity === 'critical' || crack.severity === 'high'
     ? 'Routine maintenance and quick response first; if the defect spans the entire stretch, it must be endorsed to planning for reblocking, project treatment, or a bigger funding request.'
@@ -32,7 +34,7 @@ function getDemoDetailEntries(crack: Crack) {
     { label: 'Landmark', value: landmark || 'Routine inspection area' },
     {
       label: 'Defect',
-      value: `${defectLabel} crack observed on the pavement edge and lane surface. Surface distress is localized and follows routine maintenance repair procedures.`,
+      value: `${defect.label}: ${defect.description}`,
     },
     { label: 'Action taken', value: actionTaken },
     { label: 'Quantity', value: `${quantityMeters} linear meters` },
@@ -137,7 +139,8 @@ export default function CrackMap() {
                     <Popup>
                       <div className="space-y-1">
                         <p className="font-bold text-gray-900">{crack.location}</p>
-                        <p className="text-sm capitalize text-gray-700">{crack.crackType}</p>
+                        <p className="text-sm font-semibold text-gray-800">{getCrackTypeDetails(crack.crackType).label}</p>
+                        <p className="text-xs text-gray-600">{getCrackTypeDetails(crack.crackType).description}</p>
                         <span className={`inline-block px-2 py-1 rounded text-xs font-semibold text-white ${severityConfig[crack.severity].color}`}>
                           {severityConfig[crack.severity].label}
                         </span>
@@ -189,7 +192,7 @@ export default function CrackMap() {
             <div className="flex-1 space-y-4">
               <div className="w-full h-32 bg-gray-200 rounded-lg overflow-hidden">
                 <img
-                  src={selectedCrack.imageUrl || 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=500&h=500&fit=crop'}
+                  src={getCrackImageUrl(selectedCrack.imageUrl, selectedCrack.crackType)}
                   alt={selectedCrack.location}
                   className="w-full h-full object-cover"
                 />

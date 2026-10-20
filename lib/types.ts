@@ -26,12 +26,13 @@ export interface Crack {
 }
 
 export type CrackType =
-  | 'longitudinal'
   | 'transverse'
-  | 'alligator'
-  | 'edge'
-  | 'reflection'
-  | 'other';
+  | 'longitudinal'
+  | 'block'
+  | 'corner'
+  | 'diagonal'
+  | 'meandering'
+  | 'reflection';
 
 export type Severity = 'low' | 'medium' | 'high' | 'critical';
 
@@ -70,10 +71,24 @@ export interface User {
 
 export interface Report {
   id: string;
-  crackId: string;
-  reportedBy: string;
-  status: 'new' | 'reviewed' | 'approved' | 'rejected';
-  priority: 'low' | 'medium' | 'high' | 'critical';
+  region: string;
+  districtOffice: string;
+  inspectionDate: string;
+  validationDate: string;
+  stationing: string;
+  landmark: string;
+  roadSection: string;
+  defectCode: ReportDefectCode;
+  estimatedQuantity: number | null;
+  unitOfMeasure: string;
+  remarks: string;
+  preparedBy: string;
+  designation: string;
   createdAt: Date | string;
-  description: string;
+  updatedAt: Date | string;
 }
+
+export type ReportDefectCode =
+  | '01' | '02' | '03' | '04' | '05' | '06-A' | '06-C' | '06-P' | '06-Y'
+  | '07' | '08' | '09' | '10' | '11' | '12' | '13' | '14' | '15-B'
+  | '15-P' | '15-S' | '16';

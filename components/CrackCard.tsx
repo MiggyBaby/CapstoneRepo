@@ -4,12 +4,15 @@ import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { FiMapPin, FiCalendar, FiImage } from 'react-icons/fi';
+import { getCrackTypeDetails } from '@/lib/crack-types';
+import { CrackType } from '@/lib/types';
+import { getCrackImageUrl } from '@/lib/crack-images';
 
 interface CrackCardProps {
   id: string;
   imageUrl?: string | null;
   location: string;
-  crackType: string;
+  crackType: CrackType;
   severity: 'low' | 'medium' | 'high' | 'critical';
   detectedAt: string;
   coordinates: {
@@ -35,25 +38,23 @@ export default function CrackCard({
   };
 
   const config = severityConfig[severity];
+  const typeDetails = getCrackTypeDetails(crackType);
+  const displayImageUrl = getCrackImageUrl(imageUrl, crackType);
+  const isSampleImage = !imageUrl;
 
   return (
     <Link href={`/cracks/${id}`}>
       <div className="card cursor-pointer hover:shadow-lg transition-shadow">
         {/* Image */}
         <div className="relative w-full h-48 rounded-lg overflow-hidden mb-4">
-          {imageUrl ? (
-            <Image
-              src={imageUrl}
-              alt={`Crack at ${location}`}
-              fill
-              className="object-cover"
-            />
-          ) : (
-            <div className="w-full h-full bg-gray-100 flex flex-col items-center justify-center text-gray-400">
-              <FiImage size={28} />
-              <span className="text-xs mt-2">No image available</span>
-            </div>
-          )}
+          <Image
+            src={displayImageUrl}
+            alt={isSampleImage ? `Sample pavement crack image for ${location}` : `Crack at ${location}`}
+            fill
+            unoptimized
+            className="object-cover"
+          />
+          {isSampleImage && <span className="absolute bottom-3 left-3 rounded bg-black/70 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">Sample image</span>}
           {/* Severity Badge */}
           <div className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-semibold ${config.bg} ${config.text}`}>
             {config.label}
@@ -76,7 +77,8 @@ export default function CrackCard({
           {/* Crack Type */}
           <div>
             <p className="text-xs text-gray-600 uppercase tracking-wide">Type</p>
-            <p className="text-sm font-medium text-gray-900">{crackType}</p>
+            <p className="text-sm font-medium text-gray-900">{typeDetails.label}</p>
+            <p className="mt-1 text-xs leading-5 text-gray-600">{typeDetails.description}</p>
           </div>
 
           {/* Detected At */}

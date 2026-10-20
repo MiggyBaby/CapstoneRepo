@@ -1,50 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { FiFilter, FiDownload, FiSearch } from 'react-icons/fi';
+import { useEffect, useState } from 'react';
+import { FiDownload, FiSearch } from 'react-icons/fi';
 import CrackCard from '@/components/CrackCard';
 import { Crack, Severity, CrackType } from '@/lib/types';
 import { fetchCracks } from '@/lib/api-client';
-
-// Mock data
-const mockCracks: Crack[] = [
-  {
-    id: '1',
-    location: 'Gen. Luna St, Manila',
-    coordinates: { lat: 14.5994, lng: 120.9842 },
-    imageUrl: 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=500&h=500&fit=crop',
-    crackType: 'alligator',
-    severity: 'critical',
-    detectedAt: '2024-09-04',
-    status: 'new',
-    createdAt: '2024-09-04',
-    updatedAt: '2024-09-04',
-  },
-  {
-    id: '2',
-    location: 'Ayala Avenue, Makati',
-    coordinates: { lat: 14.5629, lng: 121.0248 },
-    imageUrl: 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=500&h=500&fit=crop',
-    crackType: 'longitudinal',
-    severity: 'high',
-    detectedAt: '2024-09-03',
-    status: 'assigned',
-    createdAt: '2024-09-03',
-    updatedAt: '2024-09-03',
-  },
-  {
-    id: '3',
-    location: 'EDSA, Quezon City',
-    coordinates: { lat: 14.6091, lng: 121.0245 },
-    imageUrl: 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=500&h=500&fit=crop',
-    crackType: 'transverse',
-    severity: 'medium',
-    detectedAt: '2024-09-02',
-    status: 'in-progress',
-    createdAt: '2024-09-02',
-    updatedAt: '2024-09-02',
-  },
-];
+import { DPWH_CRACK_TYPES, getCrackTypeDetails } from '@/lib/crack-types';
 
 export default function CracksPage() {
   const [cracks, setCracks] = useState<Crack[]>([]);
@@ -54,11 +15,11 @@ export default function CracksPage() {
   const [selectedType, setSelectedType] = useState<CrackType | 'all'>('all');
 
   const severities: Severity[] = ['low', 'medium', 'high', 'critical'];
-  const crackTypes: CrackType[] = ['longitudinal', 'transverse', 'alligator', 'edge', 'reflection', 'other'];
+  const crackTypes = DPWH_CRACK_TYPES;
 
   useEffect(() => {
     fetchCracks()
-      .then(setCracks)
+      .then((records) => setCracks(records.filter((crack) => DPWH_CRACK_TYPES.includes(crack.crackType))))
       .catch((error) => console.error('Unable to load cracks from Supabase:', error))
       .finally(() => setLoading(false));
   }, []);
@@ -66,7 +27,8 @@ export default function CracksPage() {
   const filteredCracks = cracks.filter((crack) => {
     const matchesSearch =
       crack.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      crack.crackType.includes(searchTerm.toLowerCase());
+      getCrackTypeDetails(crack.crackType).label.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      getCrackTypeDetails(crack.crackType).description.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesSeverity = selectedSeverity === 'all' || crack.severity === selectedSeverity;
     const matchesType = selectedType === 'all' || crack.crackType === selectedType;
@@ -81,7 +43,7 @@ export default function CracksPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Crack Detection</h1>
           <p className="text-gray-600 mt-1">
-            Total detected: <span className="font-semibold text-primary-600">{cracks.length}</span>
+            DPWH crack records: <span className="font-semibold text-primary-600">{cracks.length}</span>
           </p>
         </div>
         <button className="btn-primary flex items-center space-x-2">
@@ -139,11 +101,17 @@ export default function CracksPage() {
                 <option value="all">All Types</option>
                 {crackTypes.map((type) => (
                   <option key={type} value={type}>
-                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                    {getCrackTypeDetails(type).label}
                   </option>
                 ))}
               </select>
             </div>
+
+            {selectedType !== 'all' && (
+              <p className="border-l-2 border-teal-700 pl-3 text-sm text-gray-600">
+                {getCrackTypeDetails(selectedType).description}
+              </p>
+            )}
           </div>
 
           {/* Active Filters */}

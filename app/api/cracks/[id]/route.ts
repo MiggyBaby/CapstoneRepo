@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { SUPPORTED_CRACK_TYPES } from '@/lib/crack-types';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,7 +25,9 @@ export async function GET(_: NextRequest, { params }: RouteContext) {
     const { id } = await params;
     const { data, error } = await getSupabaseAdmin().from('crack_records').select('*').eq('id', id).maybeSingle();
     if (error) throw error;
-    if (!data) return NextResponse.json({ success: false, error: 'Crack not found' }, { status: 404 });
+    if (!data || !SUPPORTED_CRACK_TYPES.includes(data.crack_type)) {
+      return NextResponse.json({ success: false, error: 'Crack not found' }, { status: 404 });
+    }
     return NextResponse.json({ success: true, data: toCrack(data) });
   } catch (error) {
     console.error('Error fetching crack:', error);
@@ -36,6 +39,9 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
   try {
     const { id } = await params;
     const body = await request.json();
+    if ('crackType' in body && !SUPPORTED_CRACK_TYPES.includes(body.crackType)) {
+      return NextResponse.json({ success: false, error: 'Select a valid DPWH crack type.' }, { status: 400 });
+    }
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
     const fields: Record<string, string> = {
       location: 'location', imageUrl: 'image_url', crackType: 'crack_type', severity: 'severity',

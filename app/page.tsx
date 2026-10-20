@@ -5,72 +5,11 @@ import { FiAlertCircle, FiCheckCircle, FiClock, FiTrendingUp } from 'react-icons
 import StatCard from '@/components/StatCard';
 import CrackCard from '@/components/CrackCard';
 import { Crack } from '@/lib/types';
-import { fetchCracks } from '@/lib/api-client';
-
-// Mock data for demonstration
-const mockCracks: Crack[] = [
-  {
-    id: '1',
-    location: 'Gen. Luna St, Manila',
-    coordinates: { lat: 14.5994, lng: 120.9842 },
-    imageUrl: 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=500&h=500&fit=crop',
-    crackType: 'alligator',
-    severity: 'critical',
-    detectedAt: '2024-09-04',
-    width: 2.5,
-    length: 150,
-    status: 'new',
-    createdAt: '2024-09-04',
-    updatedAt: '2024-09-04',
-  },
-  {
-    id: '2',
-    location: 'Ayala Avenue, Makati',
-    coordinates: { lat: 14.5629, lng: 121.0248 },
-    imageUrl: 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=500&h=500&fit=crop',
-    crackType: 'longitudinal',
-    severity: 'high',
-    detectedAt: '2024-09-03',
-    width: 1.8,
-    length: 200,
-    status: 'assigned',
-    assignedTo: 'John Doe',
-    createdAt: '2024-09-03',
-    updatedAt: '2024-09-03',
-  },
-  {
-    id: '3',
-    location: 'EDSA, Quezon City',
-    coordinates: { lat: 14.6091, lng: 121.0245 },
-    imageUrl: 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=500&h=500&fit=crop',
-    crackType: 'transverse',
-    severity: 'medium',
-    detectedAt: '2024-09-02',
-    width: 1.2,
-    length: 80,
-    status: 'in-progress',
-    assignedTo: 'Jane Smith',
-    createdAt: '2024-09-02',
-    updatedAt: '2024-09-02',
-  },
-  {
-    id: '4',
-    location: 'Commonwealth Ave, Quezon City',
-    coordinates: { lat: 14.6321, lng: 121.0456 },
-    imageUrl: 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=500&h=500&fit=crop',
-    crackType: 'edge',
-    severity: 'low',
-    detectedAt: '2024-08-31',
-    width: 0.8,
-    length: 45,
-    status: 'resolved',
-    createdAt: '2024-08-31',
-    updatedAt: '2024-09-04',
-  },
-];
+import { AnalyticsData, fetchAnalytics, fetchCracks } from '@/lib/api-client';
 
 export default function Dashboard() {
   const [cracks, setCracks] = useState<Crack[]>([]);
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -78,13 +17,16 @@ export default function Dashboard() {
       .then(setCracks)
       .catch((error) => console.error('Unable to load cracks from Supabase:', error))
       .finally(() => setLoading(false));
+    fetchAnalytics()
+      .then(setAnalytics)
+      .catch((error) => console.error('Unable to load dashboard analytics:', error));
   }, []);
 
   const stats = {
-    total: cracks.length,
-    critical: cracks.filter((c) => c.severity === 'critical').length,
-    resolved: cracks.filter((c) => c.status === 'resolved').length,
-    inProgress: cracks.filter((c) => c.status === 'in-progress').length,
+    total: analytics?.totalCracks ?? 0,
+    critical: analytics?.criticalCracks ?? 0,
+    resolved: analytics?.resolvedCracks ?? 0,
+    inProgress: analytics?.inProgressCracks ?? 0,
   };
 
   return (

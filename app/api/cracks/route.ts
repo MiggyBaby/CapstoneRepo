@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { SUPPORTED_CRACK_TYPES } from '@/lib/crack-types';
 
 export const dynamic = 'force-dynamic';
 
-const crackTypes = ['longitudinal', 'transverse', 'alligator', 'edge', 'reflection', 'other'];
 const severities = ['low', 'medium', 'high', 'critical'];
 
 function toCrack(record: any) {
@@ -34,7 +34,14 @@ export async function GET(request: NextRequest) {
 
     let query = getSupabaseAdmin().from('crack_records').select('*').order('detected_at', { ascending: false });
     if (severity) query = query.eq('severity', severity);
-    if (crackType) query = query.eq('crack_type', crackType);
+    if (crackType) {
+      if (!SUPPORTED_CRACK_TYPES.includes(crackType as typeof SUPPORTED_CRACK_TYPES[number])) {
+        return NextResponse.json({ success: false, error: 'Select a valid DPWH crack type.' }, { status: 400 });
+      }
+      query = query.eq('crack_type', crackType);
+    } else {
+      query = query.in('crack_type', SUPPORTED_CRACK_TYPES);
+    }
     if (location) query = query.ilike('location', `%${location}%`);
     const { data, error } = await query.limit(limit);
     if (error) throw error;
@@ -50,7 +57,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { location, coordinates, crackType, severity } = body;
-    if (!location || !coordinates || !crackTypes.includes(crackType) || !severities.includes(severity)) {
+    if (!location || !coordinates || !SUPPORTED_CRACK_TYPES.includes(crackType) || !severities.includes(severity)) {
       return NextResponse.json({ success: false, error: 'Missing or invalid required crack fields' }, { status: 400 });
     }
     if (!Number.isFinite(coordinates.lat) || !Number.isFinite(coordinates.lng)) {

@@ -1,4 +1,4 @@
-import { Crack, CrackFilter } from './types';
+import { Crack, CrackFilter, Report } from './types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 
@@ -104,6 +104,39 @@ export async function deleteCrack(id: string): Promise<boolean> {
     console.error('Error deleting crack:', error);
     throw error;
   }
+}
+
+// ===== Reports API =====
+
+async function reportRequest<T>(url: string, options?: RequestInit): Promise<T> {
+  const response = await fetch(url, options);
+  const result = await response.json();
+  if (!response.ok) throw new Error(result?.error || 'Report request failed');
+  return result.data as T;
+}
+
+export function fetchReports(): Promise<Report[]> {
+  return reportRequest<Report[]>(`${API_URL}/reports`);
+}
+
+export function createReport(report: Omit<Report, 'id' | 'createdAt' | 'updatedAt'>): Promise<Report> {
+  return reportRequest<Report>(`${API_URL}/reports`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(report),
+  });
+}
+
+export function updateReport(id: string, updates: Omit<Report, 'id' | 'createdAt' | 'updatedAt'>): Promise<Report> {
+  return reportRequest<Report>(`${API_URL}/reports/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  });
+}
+
+export async function deleteReport(id: string): Promise<void> {
+  await reportRequest<null>(`${API_URL}/reports/${id}`, { method: 'DELETE' });
 }
 
 // ===== Analytics API =====

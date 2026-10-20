@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { SUPPORTED_CRACK_TYPES } from '@/lib/crack-types';
 
 // Prevent Next.js from attempting a database request while building.
 export const dynamic = 'force-dynamic';
 
-const types = ['longitudinal', 'transverse', 'alligator', 'edge', 'reflection', 'other'];
 const statuses = ['new', 'assigned', 'in-progress', 'resolved'];
 
 export async function GET() {
@@ -17,13 +17,16 @@ export async function GET() {
         criticalCracks: 0, highCracks: 0,
         mediumCracks: 0, lowCracks: 0,
         resolvedCracks: 0, inProgressCracks: 0,
-        cracksByType: Object.fromEntries(types.map((type) => [type, 0])),
+        cracksByType: Object.fromEntries(SUPPORTED_CRACK_TYPES.map((type) => [type, 0])),
         cracksByStatus: Object.fromEntries(statuses.map((status) => [status, 0])),
         timestamp: new Date().toISOString(),
       } });
     }
 
-    const { data: cracks, error } = await getSupabaseAdmin().from('crack_records').select('severity, status, crack_type');
+    const { data: cracks, error } = await getSupabaseAdmin()
+      .from('crack_records')
+      .select('severity, status, crack_type')
+      .in('crack_type', SUPPORTED_CRACK_TYPES);
     if (error) throw error;
     const records = cracks || [];
     const count = (field: string, value: string) => records.filter((record: any) => record[field] === value).length;
@@ -32,7 +35,7 @@ export async function GET() {
       criticalCracks: count('severity', 'critical'), highCracks: count('severity', 'high'),
       mediumCracks: count('severity', 'medium'), lowCracks: count('severity', 'low'),
       resolvedCracks: count('status', 'resolved'), inProgressCracks: count('status', 'in-progress'),
-      cracksByType: Object.fromEntries(types.map((type) => [type, count('crack_type', type)])),
+      cracksByType: Object.fromEntries(SUPPORTED_CRACK_TYPES.map((type) => [type, count('crack_type', type)])),
       cracksByStatus: Object.fromEntries(statuses.map((status) => [status, count('status', status)])),
       timestamp: new Date().toISOString(),
     } });

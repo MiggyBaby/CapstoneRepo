@@ -7,6 +7,8 @@ import { useParams } from 'next/navigation';
 import { FiArrowLeft, FiCalendar, FiMapPin, FiNavigation, FiTool } from 'react-icons/fi';
 import { Crack } from '@/lib/types';
 import { fetchCrackById } from '@/lib/api-client';
+import { getCrackTypeDetails } from '@/lib/crack-types';
+import { getCrackImageUrl } from '@/lib/crack-images';
 
 function parseDemoFieldText(description?: string) {
   const entries: { label: string; value: string }[] = [];
@@ -78,11 +80,8 @@ export default function CrackDetailPage() {
         <div className="grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6">
           <div className="card overflow-hidden">
             <div className="relative h-80 w-full overflow-hidden rounded-xl border border-gray-200 bg-gray-100">
-              {crack.imageUrl ? (
-                <Image src={crack.imageUrl} alt={crack.location} fill className="object-cover" />
-              ) : (
-                <div className="flex h-full items-center justify-center text-gray-400">No image available</div>
-              )}
+              <Image src={getCrackImageUrl(crack.imageUrl, crack.crackType)} alt={`Sample crack photo for ${crack.location}`} fill unoptimized className="object-cover" />
+              {!crack.imageUrl && <span className="absolute bottom-3 left-3 rounded bg-black/70 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">Sample image</span>}
             </div>
 
             <div className="mt-6 space-y-4">
@@ -97,7 +96,8 @@ export default function CrackDetailPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
                   <p className="text-[10px] uppercase tracking-wide text-gray-600">Type</p>
-                  <p className="mt-1 text-sm font-semibold capitalize">{crack.crackType}</p>
+                  <p className="mt-1 text-sm font-semibold">{getCrackTypeDetails(crack.crackType).label}</p>
+                  <p className="mt-1 text-xs leading-5 text-gray-600">{getCrackTypeDetails(crack.crackType).description}</p>
                 </div>
                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
                   <p className="text-[10px] uppercase tracking-wide text-gray-600">Severity</p>

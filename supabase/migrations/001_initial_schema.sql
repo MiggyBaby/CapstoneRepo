@@ -3,7 +3,7 @@ create extension if not exists postgis;
 
 create type public.crack_severity as enum ('low', 'medium', 'high', 'critical');
 create type public.crack_status as enum ('new', 'assigned', 'in-progress', 'resolved');
-create type public.crack_type as enum ('longitudinal', 'transverse', 'alligator', 'edge', 'reflection', 'other');
+create type public.crack_type as enum ('transverse', 'longitudinal', 'block', 'corner', 'diagonal', 'meandering', 'reflection');
 
 create table public.cracks (
   id uuid primary key default gen_random_uuid(),
