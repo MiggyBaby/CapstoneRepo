@@ -1,0 +1,25 @@
+import type { ReportDefectCode } from '@/lib/types';
+
+export const REPORT_DEFECTS: Array<{ code: ReportDefectCode; label: string }> = [
+  { code: '01', label: 'Potholes' },
+  { code: '02', label: 'Alligator Cracks' },
+  { code: '03', label: 'Major Scaling' },
+  { code: '04', label: 'Shoving and Corrugation' },
+  { code: '05', label: 'Pumping and Depression' },
+  { code: '06-A', label: 'No Edge Line' },
+  { code: '06-C', label: 'No Center Line' },
+  { code: '06-Y', label: 'No Yellow Line' },
+  { code: '06-P', label: 'No Pedestrian Lane' },
+  { code: '07', label: 'Defects on Shoulders' },
+  { code: '08', label: 'Bush Vegetation' },
+  { code: '09', label: 'Clogged Drains' },
+  { code: '10', label: 'Open Manhole' },
+  { code: '11', label: 'No/Inadequate Sealant in Joints' },
+  { code: '12', label: 'Cracks' },
+  { code: '13', label: 'Raveling' },
+  { code: '14', label: 'Unmaintained Road Signs and Markers' },
+  { code: '15-B', label: 'Bridge Deck' },
+  { code: '15-S', label: 'Bridge Side' },
+  { code: '15-P', label: 'Bridge Paint' },
+  { code: '16', label: 'Unmaintained Guardrails' },
+];

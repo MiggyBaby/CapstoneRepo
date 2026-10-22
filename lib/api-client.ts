@@ -1,4 +1,4 @@
-import { Crack, CrackFilter, Report } from './types';
+import { Crack, CrackFilter, DistrictSummary, Report } from './types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 
@@ -137,6 +137,18 @@ export function updateReport(id: string, updates: Omit<Report, 'id' | 'createdAt
 
 export async function deleteReport(id: string): Promise<void> {
   await reportRequest<null>(`${API_URL}/reports/${id}`, { method: 'DELETE' });
+}
+
+export function fetchDistrictSummaries(): Promise<DistrictSummary[]> {
+  return reportRequest<DistrictSummary[]>(`${API_URL}/district-summaries`);
+}
+
+export function createDistrictSummary(summary: Omit<DistrictSummary, 'id' | 'createdAt'>): Promise<DistrictSummary> {
+  return reportRequest<DistrictSummary>(`${API_URL}/district-summaries`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(summary),
+  });
 }
 
 // ===== Analytics API =====

@@ -108,7 +108,7 @@ export default function CracksPage() {
             </div>
 
             {selectedType !== 'all' && (
-              <p className="border-l-2 border-teal-700 pl-3 text-sm text-gray-600">
+              <p className="border-l-2 border-primary-700 pl-3 text-sm text-gray-600">
                 {getCrackTypeDetails(selectedType).description}
               </p>
             )}

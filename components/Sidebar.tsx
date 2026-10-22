@@ -53,19 +53,19 @@ export default function Sidebar() {
       iconName: 'map',
     },
     {
-      label: 'Analytics',
+      label: 'District Summary',
       href: '/analytics',
       iconName: 'chart',
-    },
-    {
-      label: 'Gallery',
-      href: '/gallery',
-      iconName: 'gallery',
     },
     {
       label: 'Reports',
       href: '/reports',
       iconName: 'reports',
+    },
+    {
+      label: 'Gallery',
+      href: '/gallery',
+      iconName: 'gallery',
     },
     {
       label: 'Settings',

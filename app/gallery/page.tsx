@@ -66,20 +66,20 @@ export default function GalleryPage() {
     <div className="space-y-6 animate-fade-in">
       <header className="flex flex-wrap items-end justify-between gap-4 border-b border-gray-200 pb-5">
         <div>
-          <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-teal-800">DPWH road condition records</p>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-primary-800">DPWH road condition records</p>
           <h1 className="text-3xl font-bold text-gray-900">Crack Image Gallery</h1>
           <p className="mt-1 text-sm text-gray-600">{cracks.length} crack record{cracks.length === 1 ? '' : 's'}</p>
         </div>
         <label className="relative block w-full sm:w-80">
           <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={17} />
-          <input value={search} onChange={(event) => setSearch(event.target.value)} className="w-full rounded border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm outline-none focus:border-teal-700 focus:ring-2 focus:ring-teal-100" placeholder="Search location or crack type" />
+          <input value={search} onChange={(event) => setSearch(event.target.value)} className="w-full rounded border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm outline-none focus:border-primary-700 focus:ring-2 focus:ring-primary-100" placeholder="Search location or crack type" />
         </label>
       </header>
 
       <div className="flex flex-wrap items-center gap-2" aria-label="Filter images by crack type">
-        <button onClick={() => setSelectedType('all')} className={`rounded border px-3 py-1.5 text-sm ${selectedType === 'all' ? 'border-teal-800 bg-teal-800 text-white' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}`}>All types</button>
+        <button onClick={() => setSelectedType('all')} className={`rounded border px-3 py-1.5 text-sm ${selectedType === 'all' ? 'border-primary-800 bg-primary-800 text-white' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}`}>All types</button>
         {DPWH_CRACK_TYPES.map((type) => (
-          <button key={type} onClick={() => setSelectedType(type)} className={`rounded border px-3 py-1.5 text-sm ${selectedType === type ? 'border-teal-800 bg-teal-800 text-white' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}`}>
+          <button key={type} onClick={() => setSelectedType(type)} className={`rounded border px-3 py-1.5 text-sm ${selectedType === type ? 'border-primary-800 bg-primary-800 text-white' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}`}>
             {getCrackTypeDetails(type).label}
           </button>
         ))}
@@ -106,7 +106,7 @@ export default function GalleryPage() {
                 </Link>
                 <div className="space-y-3 p-4">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-teal-800">{type.label}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-primary-800">{type.label}</p>
                     <h2 className="mt-1 font-semibold text-gray-900">{crack.location}</h2>
                     <p className="mt-1 text-sm leading-5 text-gray-600">{type.description}</p>
                     <p className="mt-2 text-xs text-gray-500">
@@ -114,10 +114,10 @@ export default function GalleryPage() {
                     </p>
                   </div>
                   <div className="flex items-center justify-between border-t border-gray-100 pt-3">
-                    <Link href={`/cracks/${crack.id}`} className="text-sm font-medium text-teal-800 hover:underline">Record details</Link>
+                    <Link href={`/cracks/${crack.id}`} className="text-sm font-medium text-primary-800 hover:underline">Record details</Link>
                     <div className="flex items-center gap-1">
                                   <a href={imageUrl} target="_blank" rel="noreferrer" title="Open image" aria-label={`Open image for ${crack.location}`} className="rounded p-2 text-gray-600 hover:bg-gray-100"><FiExternalLink size={17} /></a>
-                      <button onClick={() => void downloadImage(crack)} disabled={downloadingId === crack.id} title="Save image" aria-label={`Save image for ${crack.location}`} className="inline-flex items-center gap-2 rounded bg-teal-800 px-3 py-2 text-sm font-semibold text-white hover:bg-teal-900 disabled:opacity-60">
+                      <button onClick={() => void downloadImage(crack)} disabled={downloadingId === crack.id} title="Save image" aria-label={`Save image for ${crack.location}`} className="inline-flex items-center gap-2 rounded bg-primary-700 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">
                         <FiDownload size={16} />{downloadingId === crack.id ? 'Saving...' : 'Save image'}
                       </button>
                     </div>

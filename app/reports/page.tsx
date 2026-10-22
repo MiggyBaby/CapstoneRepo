@@ -3,34 +3,11 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { FiPlus, FiSearch, FiEdit2, FiTrash2, FiX, FiFileText } from 'react-icons/fi';
 import { createReport, deleteReport, fetchReports, updateReport } from '@/lib/api-client';
-import { Report, ReportDefectCode } from '@/lib/types';
+import { Report } from '@/lib/types';
+import { REPORT_DEFECTS } from '@/lib/report-defects';
 
 type ReportFields = Omit<Report, 'id' | 'createdAt' | 'updatedAt'>;
 type FormFields = Omit<ReportFields, 'estimatedQuantity'> & { estimatedQuantity: string };
-
-const defects: Array<{ code: ReportDefectCode; label: string }> = [
-  { code: '01', label: 'Potholes' },
-  { code: '02', label: 'Alligator Cracks' },
-  { code: '03', label: 'Major Scaling' },
-  { code: '04', label: 'Shoving and Corrugation' },
-  { code: '05', label: 'Pumping and Depression' },
-  { code: '06-A', label: 'No Edge Line' },
-  { code: '06-C', label: 'No Center Line' },
-  { code: '06-Y', label: 'No Yellow Line' },
-  { code: '06-P', label: 'No Pedestrian Lane' },
-  { code: '07', label: 'Defects on Shoulders' },
-  { code: '08', label: 'Bush Vegetation' },
-  { code: '09', label: 'Clogged Drains' },
-  { code: '10', label: 'Open Manhole' },
-  { code: '11', label: 'No/Inadequate Sealant in Joints' },
-  { code: '12', label: 'Cracks' },
-  { code: '13', label: 'Raveling' },
-  { code: '14', label: 'Unmaintained Road Signs and Markers' },
-  { code: '15-B', label: 'Bridge Deck' },
-  { code: '15-S', label: 'Bridge Side' },
-  { code: '15-P', label: 'Bridge Paint' },
-  { code: '16', label: 'Unmaintained Guardrails' },
-];
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -69,7 +46,7 @@ function displayDate(value: string) {
   return new Date(`${value}T00:00:00`).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-const inputClass = 'w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-teal-700 focus:ring-2 focus:ring-teal-100';
+const inputClass = 'w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-primary-700 focus:ring-2 focus:ring-primary-100';
 const labelClass = 'mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600';
 
 export default function ReportsPage() {
@@ -94,7 +71,13 @@ export default function ReportsPage() {
     }
   }
 
-  useEffect(() => { void loadReports(); }, []);
+  useEffect(() => {
+    void loadReports();
+    if (new URLSearchParams(window.location.search).get('new') === '1') {
+      openCreate();
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, []);
 
   function openCreate() {
     setEditing(null);
@@ -148,7 +131,7 @@ export default function ReportsPage() {
   const query = search.trim().toLowerCase();
   const filtered = reports.filter((report) => [
     report.region, report.districtOffice, report.roadSection, report.stationing,
-    report.landmark, report.preparedBy, defects.find((item) => item.code === report.defectCode)?.label || '',
+    report.landmark, report.preparedBy, REPORT_DEFECTS.find((item) => item.code === report.defectCode)?.label || '',
   ].some((value) => value.toLowerCase().includes(query)));
 
   function setField<K extends keyof FormFields>(key: K, value: FormFields[K]) {
@@ -159,11 +142,11 @@ export default function ReportsPage() {
     <div className="min-h-full space-y-6 animate-fade-in">
       <header className="flex flex-wrap items-end justify-between gap-4 border-b border-gray-200 pb-5">
         <div>
-          <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-teal-800">Road and bridge validation</p>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-primary-800">Road and bridge validation</p>
           <h1 className="text-3xl font-bold text-gray-900">Inspection Reports</h1>
           <p className="mt-1 text-sm text-gray-600">{reports.length} recorded inspection{reports.length === 1 ? '' : 's'}</p>
         </div>
-        <button onClick={openCreate} className="inline-flex items-center gap-2 rounded bg-teal-800 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-900">
+        <button onClick={openCreate} className="inline-flex items-center gap-2 rounded bg-primary-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-800">
           <FiPlus size={17} /> New report
         </button>
       </header>
@@ -209,7 +192,7 @@ export default function ReportsPage() {
                   </td>
                 </tr>
               ) : filtered.map((report) => {
-                const defect = defects.find((item) => item.code === report.defectCode);
+                const defect = REPORT_DEFECTS.find((item) => item.code === report.defectCode);
                 return (
                   <tr key={report.id} className="align-top hover:bg-gray-50">
                     <td className="whitespace-nowrap px-4 py-4 text-gray-700">{displayDate(report.inspectionDate)}</td>
@@ -221,14 +204,14 @@ export default function ReportsPage() {
                       <div className="font-medium text-gray-900">{report.roadSection}</div>
                       <div className="mt-0.5 text-xs text-gray-500">{report.stationing || report.landmark || 'No station or landmark'}</div>
                     </td>
-                    <td className="px-4 py-4 text-gray-700"><span className="mr-1 font-semibold text-teal-800">{report.defectCode}</span>{defect?.label}</td>
+                    <td className="px-4 py-4 text-gray-700"><span className="mr-1 font-semibold text-primary-700">{report.defectCode}</span>{defect?.label}</td>
                     <td className="whitespace-nowrap px-4 py-4 text-gray-700">{report.estimatedQuantity ?? '—'} {report.unitOfMeasure}</td>
                     <td className="px-4 py-4">
                       <div className="text-gray-900">{report.preparedBy}</div>
                       <div className="mt-0.5 text-xs text-gray-500">{report.designation}</div>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right">
-                      <button title="Edit report" aria-label={`Edit report for ${report.roadSection}`} onClick={() => openEdit(report)} className="mr-1 rounded p-2 text-gray-600 hover:bg-teal-50 hover:text-teal-800"><FiEdit2 size={16} /></button>
+                      <button title="Edit report" aria-label={`Edit report for ${report.roadSection}`} onClick={() => openEdit(report)} className="mr-1 rounded p-2 text-gray-600 hover:bg-primary-50 hover:text-primary-800"><FiEdit2 size={16} /></button>
                       <button title="Delete report" aria-label={`Delete report for ${report.roadSection}`} disabled={deletingId === report.id} onClick={() => void removeReport(report)} className="rounded p-2 text-gray-600 hover:bg-red-50 hover:text-red-700 disabled:opacity-50"><FiTrash2 size={16} /></button>
                     </td>
                   </tr>
@@ -244,7 +227,7 @@ export default function ReportsPage() {
           <section role="dialog" aria-modal="true" aria-labelledby="report-dialog-title" className="my-auto w-full max-w-3xl border border-gray-200 bg-white shadow-2xl">
             <div className="flex items-start justify-between border-b border-gray-200 px-5 py-4 sm:px-7">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-teal-800">DPWH form entry</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-primary-800">DPWH form entry</p>
                 <h2 id="report-dialog-title" className="mt-1 text-xl font-bold text-gray-900">{editing ? 'Edit inspection report' : 'New inspection report'}</h2>
               </div>
               <button type="button" title="Close" aria-label="Close report form" onClick={() => setDialogOpen(false)} className="rounded p-2 text-gray-500 hover:bg-gray-100"><FiX size={19} /></button>
@@ -277,7 +260,7 @@ export default function ReportsPage() {
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <label className="sm:col-span-2"><span className={labelClass}>Defect code *</span>
                     <select required value={fields.defectCode} onChange={(e) => setField('defectCode', e.target.value as ReportDefectCode)} className={inputClass}>
-                      {defects.map((defect) => <option key={defect.code} value={defect.code}>{defect.code} - {defect.label}</option>)}
+                      {REPORT_DEFECTS.map((defect) => <option key={defect.code} value={defect.code}>{defect.code} - {defect.label}</option>)}
                     </select>
                   </label>
                   <label><span className={labelClass}>Estimated quantity</span><input type="number" min="0" step="any" value={fields.estimatedQuantity} onChange={(e) => setField('estimatedQuantity', e.target.value)} className={inputClass} /></label>
@@ -296,7 +279,7 @@ export default function ReportsPage() {
 
               <div className="flex justify-end gap-2 border-t border-gray-200 pt-4">
                 <button type="button" disabled={saving} onClick={() => setDialogOpen(false)} className="rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-                <button type="submit" disabled={saving} className="rounded bg-teal-800 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-900 disabled:opacity-60">{saving ? 'Saving...' : editing ? 'Save changes' : 'Save report'}</button>
+                <button type="submit" disabled={saving} className="rounded bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-60">{saving ? 'Saving...' : editing ? 'Save changes' : 'Save report'}</button>
               </div>
             </form>
           </section>

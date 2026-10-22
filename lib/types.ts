@@ -88,6 +88,30 @@ export interface Report {
   updatedAt: Date | string;
 }
 
+export interface DistrictSummarySection {
+  roadSection: string;
+  stationing: string;
+  landmark: string;
+  lengthKm: number | null;
+  quantities: Partial<Record<ReportDefectCode, number>>;
+}
+
+export interface DistrictSummary {
+  id: string;
+  region: string;
+  districtOffice: string;
+  inspectionDate: string;
+  validationDate: string;
+  sections: DistrictSummarySection[];
+  preparedBy: string;
+  preparedDesignation: string;
+  reviewedBy: string;
+  reviewedDesignation: string;
+  notedBy: string;
+  notedDesignation: string;
+  createdAt: Date | string;
+}
+
 export type ReportDefectCode =
   | '01' | '02' | '03' | '04' | '05' | '06-A' | '06-C' | '06-P' | '06-Y'
   | '07' | '08' | '09' | '10' | '11' | '12' | '13' | '14' | '15-B'
