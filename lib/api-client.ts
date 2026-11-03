@@ -109,7 +109,11 @@ export async function deleteCrack(id: string): Promise<boolean> {
 // ===== Reports API =====
 
 async function reportRequest<T>(url: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(url, options);
+  const { data: { session }, error: sessionError } = await (await import('@/lib/supabase')).getSupabaseClient().auth.getSession();
+  if (sessionError) throw new Error('Unable to verify your sign-in session. Please sign in again.');
+  const headers = new Headers(options?.headers);
+  if (session?.access_token) headers.set('Authorization', `Bearer ${session.access_token}`);
+  const response = await fetch(url, { ...options, headers });
   const result = await response.json();
   if (!response.ok) throw new Error(result?.error || 'Report request failed');
   return result.data as T;

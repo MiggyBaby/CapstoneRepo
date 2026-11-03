@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { authorizeReportRequest, isAuthorizationResponse } from '@/lib/report-api-auth';
 import { REPORT_DEFECTS } from '@/lib/report-defects';
 import type { DistrictSummarySection, ReportDefectCode } from '@/lib/types';
 
@@ -78,7 +79,9 @@ function validateSummary(body: any) {
   };
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const authorization = await authorizeReportRequest(request, ['admin', 'inspector', 'worker', 'viewer']);
+  if (isAuthorizationResponse(authorization)) return authorization;
   try {
     const { data, error } = await getSupabaseAdmin()
       .from('district_summaries')
@@ -98,6 +101,8 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const authorization = await authorizeReportRequest(request, ['admin', 'inspector']);
+  if (isAuthorizationResponse(authorization)) return authorization;
   try {
     const body = await request.json();
     const mapped = validateSummary(body);

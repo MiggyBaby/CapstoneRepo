@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { authorizeReportRequest, isAuthorizationResponse } from '@/lib/report-api-auth';
 import { ReportDefectCode } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -62,7 +63,9 @@ function mapReport(body: Record<string, unknown>) {
   };
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const authorization = await authorizeReportRequest(request, ['admin', 'inspector', 'worker', 'viewer']);
+  if (isAuthorizationResponse(authorization)) return authorization;
   try {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
@@ -86,6 +89,8 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const authorization = await authorizeReportRequest(request, ['admin', 'inspector']);
+  if (isAuthorizationResponse(authorization)) return authorization;
   try {
     const body = await request.json();
     const mapped = mapReport(body);

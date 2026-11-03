@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { authorizeReportRequest, isAuthorizationResponse } from '@/lib/report-api-auth';
 import { ReportDefectCode } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -63,6 +64,8 @@ function mapReport(body: Record<string, unknown>) {
 }
 
 export async function PUT(request: NextRequest, { params }: RouteContext) {
+  const authorization = await authorizeReportRequest(request, ['admin', 'inspector']);
+  if (isAuthorizationResponse(authorization)) return authorization;
   try {
     const { id } = await params;
     const mapped = mapReport(await request.json());
@@ -86,7 +89,9 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
   }
 }
 
-export async function DELETE(_: NextRequest, { params }: RouteContext) {
+export async function DELETE(request: NextRequest, { params }: RouteContext) {
+  const authorization = await authorizeReportRequest(request, ['admin']);
+  if (isAuthorizationResponse(authorization)) return authorization;
   try {
     const { id } = await params;
     const { error, count } = await getSupabaseAdmin()
