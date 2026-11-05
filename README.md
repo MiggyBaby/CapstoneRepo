@@ -36,7 +36,7 @@ This is a capstone project for the **Near Real Time Road Crack Detection System*
 ### Prerequisites
 - Node.js 16+
 - npm or yarn
-- Firebase account
+- Supabase project
 
 ### Installation
 
@@ -45,15 +45,12 @@ This is a capstone project for the **Near Real Time Road Crack Detection System*
 npm install
 ```
 
-2. **Configure Firebase** - Add credentials to `.env.local`:
+2. **Configure Supabase** - Copy `.env.example` to `.env.local`, then set the browser-safe URL and publishable key from Supabase **Project Settings → API**:
 ```
-NEXT_PUBLIC_FIREBASE_API_KEY=your_key
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_domain
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_bucket
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
 ```
+Restart the development server after changing environment variables. For Vercel or another deployment, add the same two variables to the site's environment settings and redeploy. Never expose a Supabase service-role key in a `NEXT_PUBLIC_` variable.
 
 3. **Start development server**
 ```bash
@@ -105,8 +102,8 @@ CapstoneRepo/
 | **Frontend** | Next.js 14 + React 18 |
 | **Language** | TypeScript |
 | **Styling** | Tailwind CSS |
-| **Backend** | SupaBase + PostgreSQL|
-| **Storage** | SuperBase Storage |
+| **Backend** | Supabase + PostgreSQL|
+| **Storage** | Supabase Storage |
 | **Icons** | React Icons |
 | **Maps** | Leaflet (coming soon) |
 | **Deployment** | Vercel |
@@ -151,7 +148,7 @@ Raspberry Pi + Google Coral (Hardware)
         ↓
   Detect Cracks
         ↓
-  Send to Firebase
+  Send to Supabase
         ↓
   Web Portal Fetches
         ↓
@@ -164,7 +161,7 @@ Raspberry Pi + Google Coral (Hardware)
   Mark as Resolved
 ```
 
-## 🗄️ Database Schema (Firestore)
+## 🗄️ Database Schema (Supabase)
 
 ### Collections
 
@@ -186,7 +183,7 @@ Raspberry Pi + Google Coral (Hardware)
 **reports** - Crack reports and repairs
 **analytics** - Performance metrics
 
-See `SETUP.md` for detailed database schema.
+See `SETUP.md` for setup details.
 
 ## 🚀 Deployment
 

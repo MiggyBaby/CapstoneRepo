@@ -7,7 +7,7 @@ Welcome to the DPWH Road Crack Detection System web portal! This guide will help
 This is a **Near Real Time Road Crack Detection System** that uses:
 - **Hardware**: Raspberry Pi + Google Coral for crack detection
 - **Web Portal**: Next.js + TypeScript for the frontend
-- **Backend**: Firebase for database and cloud storage
+- **Backend**: Supabase for database, authentication, and cloud storage
 - **Deployment**: Vercel
 
 ## 🎨 Design System
@@ -24,7 +24,7 @@ These colors represent your school's branding and are used throughout the UI.
 ### Prerequisites
 - Node.js 16+ installed
 - npm or yarn package manager
-- Firebase project (free tier available)
+- Supabase project
 - Git
 
 ### 1. Install Dependencies
@@ -33,23 +33,17 @@ These colors represent your school's branding and are used throughout the UI.
 npm install
 ```
 
-### 2. Set Up Firebase
+### 2. Set Up Supabase
 
-1. Go to [Firebase Console](https://console.firebase.google.com/)
-2. Create a new project or use an existing one
-3. Get your Firebase configuration:
-   - Click **Project Settings** → **Your Apps** → **Web App**
-   - Copy your configuration
+1. Open your project in the [Supabase Dashboard](https://supabase.com/dashboard).
+2. Go to **Project Settings** → **API** and copy the project URL and publishable key.
 
-4. Update `.env.local` with your Firebase credentials:
+3. Copy `.env.example` to `.env.local` and set:
 ```
-NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_auth_domain
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_storage_bucket
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
-NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
 ```
+Restart the development server after changing environment variables. For Vercel or another deployment, add both variables to the site's environment settings and redeploy. Never expose a Supabase service-role key in a `NEXT_PUBLIC_` variable.
 
 ### 3. Run Development Server
 
@@ -91,9 +85,9 @@ CapstoneRepo/
 | **Styling** | Tailwind CSS |
 | **UI Icons** | React Icons |
 | **State Management** | Zustand (optional) |
-| **Backend/Database** | Firebase Firestore |
-| **File Storage** | Firebase Storage |
-| **Authentication** | Firebase Auth |
+| **Backend/Database** | Supabase PostgreSQL |
+| **File Storage** | Supabase Storage |
+| **Authentication** | Supabase Auth |
 | **Maps** | Leaflet + React Leaflet |
 | **Deployment** | Vercel |
 
