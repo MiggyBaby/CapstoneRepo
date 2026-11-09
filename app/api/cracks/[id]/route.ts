@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { SUPPORTED_CRACK_TYPES } from '@/lib/crack-types';
+import { authorizeReportRequest, isAuthorizationResponse } from '@/lib/report-api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,6 +37,8 @@ export async function GET(_: NextRequest, { params }: RouteContext) {
 }
 
 export async function PUT(request: NextRequest, { params }: RouteContext) {
+  const authorization = await authorizeReportRequest(request, ['admin', 'inspector']);
+  if (isAuthorizationResponse(authorization)) return authorization;
   try {
     const { id } = await params;
     const body = await request.json();
@@ -54,7 +57,7 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) return NextResponse.json({ success: false, error: 'Coordinates must contain numeric lat and lng values' }, { status: 400 });
       updates.latitude = lat; updates.longitude = lng; updates.coordinates = `POINT(${lng} ${lat})`;
     }
-    const { data, error } = await getSupabaseAdmin().from('cracks').update(updates).eq('id', id).select().maybeSingle();
+    const { data, error } = await getSupabaseAdmin().from('cracks').update(updates).eq('id', id).neq('review_state', 'forwarded').select().maybeSingle();
     if (error) throw error;
     if (!data) return NextResponse.json({ success: false, error: 'Crack not found' }, { status: 404 });
     return NextResponse.json({ success: true, data: toCrack(data), message: 'Crack updated successfully' });
@@ -64,10 +67,13 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
   }
 }
 
-export async function DELETE(_: NextRequest, { params }: RouteContext) {
+export async function DELETE(request: NextRequest, { params }: RouteContext) {
+  const authorization = await authorizeReportRequest(request, ['admin']);
+  if (isAuthorizationResponse(authorization)) return authorization;
   try {
     const { id } = await params;
-    const { error, count } = await getSupabaseAdmin().from('cracks').delete({ count: 'exact' }).eq('id', id);
+    const { error, count } = await getSupabaseAdmin().from('cracks').delete({ count: 'exact' })    .eq('id', id)
+    .neq('review_state', 'forwarded');
     if (error) throw error;
     if (!count) return NextResponse.json({ success: false, error: 'Crack not found' }, { status: 404 });
     return NextResponse.json({ success: true, message: 'Crack deleted successfully' });

@@ -56,54 +56,17 @@ export async function fetchCrackById(id: string): Promise<Crack> {
   }
 }
 
-export async function createCrack(crack: Omit<Crack, 'id' | 'createdAt' | 'updatedAt'>): Promise<Crack> {
-  try {
-    const response = await fetch(`${API_URL}/cracks`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(crack),
-    });
-
-    if (!response.ok) throw new Error('Failed to create crack');
-
-    const data = await response.json();
-    return data.data;
-  } catch (error) {
-    console.error('Error creating crack:', error);
-    throw error;
-  }
-}
-
 export async function updateCrack(id: string, updates: Partial<Crack>): Promise<Crack> {
-  try {
-    const response = await fetch(`${API_URL}/cracks/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates),
-    });
-
-    if (!response.ok) throw new Error('Failed to update crack');
-
-    const data = await response.json();
-    return data.data;
-  } catch (error) {
-    console.error('Error updating crack:', error);
-    throw error;
-  }
+  return reportRequest<Crack>(`${API_URL}/cracks/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  });
 }
 
 export async function deleteCrack(id: string): Promise<boolean> {
-  try {
-    const response = await fetch(`${API_URL}/cracks/${id}`, {
-      method: 'DELETE',
-    });
-
-    if (!response.ok) throw new Error('Failed to delete crack');
-    return true;
-  } catch (error) {
-    console.error('Error deleting crack:', error);
-    throw error;
-  }
+  await reportRequest<null>(`${API_URL}/cracks/${id}`, { method: 'DELETE' });
+  return true;
 }
 
 // ===== Reports API =====
@@ -193,23 +156,9 @@ export interface UploadResponse {
 }
 
 export async function uploadImage(file: File): Promise<UploadResponse> {
-  try {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const response = await fetch(`${API_URL}/uploads`, {
-      method: 'POST',
-      body: formData,
-    });
-
-    if (!response.ok) throw new Error('Failed to upload image');
-
-    const data = await response.json();
-    return data.data;
-  } catch (error) {
-    console.error('Error uploading image:', error);
-    throw error;
-  }
+  const formData = new FormData();
+  formData.append('file', file);
+  return reportRequest<UploadResponse>(`${API_URL}/uploads`, { method: 'POST', body: formData });
 }
 
 // ===== Health API =====

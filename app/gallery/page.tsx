@@ -67,8 +67,8 @@ export default function GalleryPage() {
       <header className="flex flex-wrap items-end justify-between gap-4 border-b border-gray-200 pb-5">
         <div>
           <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-primary-800">DPWH road condition records</p>
-          <h1 className="text-3xl font-bold text-gray-900">Crack Image Gallery</h1>
-          <p className="mt-1 text-sm text-gray-600">{cracks.length} crack record{cracks.length === 1 ? '' : 's'}</p>
+          <h1 className="text-3xl font-bold text-gray-900">Road Defect Image Gallery</h1>
+          <p className="mt-1 text-sm text-gray-600">{cracks.length} road defect record{cracks.length === 1 ? '' : 's'}</p>
         </div>
         <label className="relative block w-full sm:w-80">
           <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={17} />
@@ -96,7 +96,7 @@ export default function GalleryPage() {
             const imageUrl = getCrackImageUrl(crack.imageUrl, crack.crackType);
             const isSampleImage = !crack.imageUrl;
             const type = getCrackTypeDetails(crack.crackType);
-            const credit = CRACK_IMAGE_CREDITS[crack.crackType];
+            const credit = crack.imageUrl ? undefined : CRACK_IMAGE_CREDITS[crack.crackType];
             return (
               <article key={crack.id} className="overflow-hidden border border-gray-200 bg-white">
                 <Link href={`/cracks/${crack.id}`} className="group relative block aspect-[4/3] overflow-hidden bg-gray-100">
@@ -109,9 +109,11 @@ export default function GalleryPage() {
                     <p className="text-xs font-semibold uppercase tracking-wide text-primary-800">{type.label}</p>
                     <h2 className="mt-1 font-semibold text-gray-900">{crack.location}</h2>
                     <p className="mt-1 text-sm leading-5 text-gray-600">{type.description}</p>
-                    <p className="mt-2 text-xs text-gray-500">
-                      Image: <a href={credit.source} target="_blank" rel="noreferrer" className="underline">{credit.creator}</a> ({credit.license})
-                    </p>
+                    {credit ? (
+                      <p className="mt-2 text-xs text-gray-500">
+                        Image: <a href={credit.source} target="_blank" rel="noreferrer" className="underline">{credit.creator}</a> ({credit.license})
+                      </p>
+                    ) : null}
                   </div>
                   <div className="flex items-center justify-between border-t border-gray-100 pt-3">
                     <Link href={`/cracks/${crack.id}`} className="text-sm font-medium text-primary-800 hover:underline">Record details</Link>

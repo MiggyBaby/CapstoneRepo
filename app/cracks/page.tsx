@@ -41,9 +41,9 @@ export default function CracksPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Crack Detection</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Road Defect Detection</h1>
           <p className="text-gray-600 mt-1">
-            DPWH crack records: <span className="font-semibold text-primary-600">{cracks.length}</span>
+            DPWH road defect records: <span className="font-semibold text-primary-600">{cracks.length}</span>
           </p>
         </div>
         <button className="btn-primary flex items-center space-x-2">
@@ -91,7 +91,7 @@ export default function CracksPage() {
             {/* Type Filter */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Crack Type
+                Road Defect Type
               </label>
               <select
                 value={selectedType}
@@ -139,7 +139,7 @@ export default function CracksPage() {
       {/* Results */}
       <div>
         <h2 className="text-lg font-bold text-gray-900 mb-4">
-          Results: {filteredCracks.length} crack{filteredCracks.length !== 1 ? 's' : ''} found
+          Results: {filteredCracks.length} road defect{filteredCracks.length !== 1 ? 's' : ''} found
         </h2>
 
         {loading ? (
@@ -163,7 +163,7 @@ export default function CracksPage() {
           </div>
         ) : (
           <div className="card text-center py-12">
-            <p className="text-gray-500 text-lg">No cracks found matching your filters.</p>
+            <p className="text-gray-500 text-lg">No road defects found matching your filters.</p>
             <button
               onClick={() => {
                 setSearchTerm('');

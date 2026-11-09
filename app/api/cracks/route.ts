@@ -4,8 +4,6 @@ import { SUPPORTED_CRACK_TYPES } from '@/lib/crack-types';
 
 export const dynamic = 'force-dynamic';
 
-const severities = ['low', 'medium', 'high', 'critical'];
-
 function toCrack(record: any) {
   return {
     id: record.id, location: record.location,
@@ -53,28 +51,9 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { location, coordinates, crackType, severity } = body;
-    if (!location || !coordinates || !SUPPORTED_CRACK_TYPES.includes(crackType) || !severities.includes(severity)) {
-      return NextResponse.json({ success: false, error: 'Missing or invalid required crack fields' }, { status: 400 });
-    }
-    if (!Number.isFinite(coordinates.lat) || !Number.isFinite(coordinates.lng)) {
-      return NextResponse.json({ success: false, error: 'Coordinates must contain numeric lat and lng values' }, { status: 400 });
-    }
-
-    const { data, error } = await getSupabaseAdmin().from('cracks').insert({
-      location, latitude: coordinates.lat, longitude: coordinates.lng,
-      coordinates: `POINT(${coordinates.lng} ${coordinates.lat})`, image_url: body.imageUrl ?? null,
-      crack_type: crackType, severity, status: body.status ?? 'new',
-      width_mm: body.width ?? null, length_mm: body.length ?? null, depth_mm: body.depth ?? null,
-      description: body.description ?? null, detected_at: body.detectedAt ?? new Date().toISOString(),
-    }).select().single();
-    if (error) throw error;
-    return NextResponse.json({ success: true, data: toCrack(data), message: 'Crack created successfully' }, { status: 201 });
-  } catch (error) {
-    console.error('Error creating crack:', error);
-    return NextResponse.json({ success: false, error: 'Failed to create crack' }, { status: 500 });
-  }
+export async function POST() {
+  return NextResponse.json(
+    { success: false, error: 'Unauthenticated detection uploads are disabled. Use POST /api/device/detections with a device bearer token.' },
+    { status: 410 },
+  );
 }

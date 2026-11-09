@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Alert, Linking, Pressable, Text, View } from 'react-native';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import { SymbolView } from 'expo-symbols';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { C, Page, Panel, Problem, s, label } from '@/components/ui';
 import { FilterDropdownPanel, type DropdownFilterSection } from '@/components/filter-dropdown-panel';
 import { fetchMapDetections } from '@/services/detections';
@@ -14,7 +14,7 @@ const BOUNDS = { south: 6.9667, north: 7.5667, west: 125.2333, east: 125.6667 };
 const STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
 const SEVERITIES: Severity[] = ['high', 'medium', 'low', 'critical'];
 const STATUSES: CrackStatus[] = ['new', 'assigned', 'in-progress', 'resolved'];
-const TYPES: Crack['crack_type'][] = ['transverse', 'longitudinal', 'block', 'corner', 'diagonal', 'meandering', 'reflection'];
+const TYPES: Crack['crack_type'][] = ['transverse', 'longitudinal', 'block', 'corner', 'diagonal', 'meandering', 'reflection', 'pothole'];
 type DateFilter = '' | 'today' | '7d' | '30d';
 type Filters = { severity: Severity | ''; status: CrackStatus | ''; type: Crack['crack_type'] | ''; date: DateFilter };
 const NO_FILTERS: Filters = { severity: '', status: '', type: '', date: '' };
@@ -46,7 +46,7 @@ export default function DavaoCityRoadMap() {
   const [rows, setRows] = useState<Crack[]>([]); const [loading, setLoading] = useState(true); const [refreshing, setRefreshing] = useState(false); const [ready, setReady] = useState(false); const [mapLoaded, setMapLoaded] = useState(false); const [mapError, setMapError] = useState(''); const [error, setError] = useState(''); const [webKey, setWebKey] = useState(0); const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedId, setSelectedId] = useState(detectionId ?? ''); const [filters, setFilters] = useState<Filters>(NO_FILTERS); const [draft, setDraft] = useState<Filters>(NO_FILTERS);
   const load = useCallback(async () => { try { setRows(await fetchMapDetections()); setError(''); } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not load detections.'); } finally { setLoading(false); setRefreshing(false); } }, []);
-  useEffect(() => { void load(); }, [load]);
+  useFocusEffect(useCallback(() => { void load(); }, [load]));
   const cityRows = useMemo(() => rows.filter(isInDavao), [rows]);
   const visibleRows = useMemo(() => cityRows.filter(row => (!filters.severity || row.severity === filters.severity) && (!filters.status || row.status === filters.status) && (!filters.type || row.crack_type === filters.type) && matchesDate(row.detected_at, filters.date)), [cityRows, filters]);
   const selected = visibleRows.find(row => row.id === selectedId);

@@ -32,7 +32,8 @@ export type CrackType =
   | 'corner'
   | 'diagonal'
   | 'meandering'
-  | 'reflection';
+  | 'reflection'
+  | 'pothole';
 
 export type Severity = 'low' | 'medium' | 'high' | 'critical';
 

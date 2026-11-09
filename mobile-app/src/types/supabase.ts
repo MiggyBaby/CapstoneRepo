@@ -1,4 +1,4 @@
-import type { Crack, CrackStatus, ValidationReport, Severity } from '@/types/database';
+import type { Crack, CrackReviewNote, CrackStatus, InspectionBatch, ValidationReport, Severity } from '@/types/database';
 
 type Table<Row, Insert = Partial<Row>, Update = Partial<Row>> = {
   Row: Row;
@@ -28,13 +28,21 @@ export type Database = {
   public: {
     Tables: {
       cracks: Table<CrackRow>;
+      crack_review_notes: Table<CrackReviewNote>;
       validation_reports: Table<ValidationReport>;
+      inspection_batches: Table<InspectionBatch, Pick<InspectionBatch, 'submitted_by'>, Partial<InspectionBatch>>;
+      inspection_batch_items: Table<{ batch_id: string; crack_id: string }>;
       district_summaries: Table<DistrictSummaryRow>;
     };
     Views: {
       crack_records: { Row: Crack; Relationships: [] };
     };
-    Functions: Record<never, never>;
+    Functions: {
+      forward_inspection_batch: {
+        Args: { p_crack_ids: string[]; p_submitted_by: string };
+        Returns: string;
+      };
+    };
     Enums: {
       crack_severity: Severity;
       crack_status: CrackStatus;

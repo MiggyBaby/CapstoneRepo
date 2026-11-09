@@ -49,7 +49,7 @@ export default function CrackCard({
         <div className="relative w-full h-48 rounded-lg overflow-hidden mb-4">
           <Image
             src={displayImageUrl}
-            alt={isSampleImage ? `Sample pavement crack image for ${location}` : `Crack at ${location}`}
+            alt={isSampleImage ? `Sample road defect image for ${location}` : `Road defect at ${location}`}
             fill
             unoptimized
             className="object-cover"

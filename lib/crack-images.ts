@@ -2,7 +2,7 @@ import { CrackType } from '@/lib/types';
 
 export const CRACK_SAMPLE_IMAGE_URL = '/images/crack-sample.jpg';
 
-export const CRACK_IMAGES_BY_TYPE: Record<CrackType, string> = {
+export const CRACK_IMAGES_BY_TYPE: Partial<Record<CrackType, string>> = {
   transverse: '/images/crack-transverse.jpg',
   longitudinal: '/images/crack-longitudinal.jpg',
   block: '/images/crack-block.jpg',
@@ -12,7 +12,7 @@ export const CRACK_IMAGES_BY_TYPE: Record<CrackType, string> = {
   reflection: '/images/crack-reflection.jpg',
 };
 
-export const CRACK_IMAGE_CREDITS: Record<CrackType, { creator: string; license: string; source: string }> = {
+export const CRACK_IMAGE_CREDITS: Partial<Record<CrackType, { creator: string; license: string; source: string }>> = {
   transverse: {
     creator: 'Donnylad',
     license: 'CC BY-SA 2.0',
@@ -51,5 +51,5 @@ export const CRACK_IMAGE_CREDITS: Record<CrackType, { creator: string; license: 
 };
 
 export function getCrackImageUrl(imageUrl?: string | null, crackType?: CrackType) {
-  return imageUrl || (crackType ? CRACK_IMAGES_BY_TYPE[crackType] : CRACK_SAMPLE_IMAGE_URL);
+  return imageUrl || (crackType ? CRACK_IMAGES_BY_TYPE[crackType] : undefined) || CRACK_SAMPLE_IMAGE_URL;
 }

@@ -8,6 +8,7 @@ export const DPWH_CRACK_TYPES: CrackType[] = [
   'diagonal',
   'meandering',
   'reflection',
+  'pothole',
 ];
 
 export const SUPPORTED_CRACK_TYPES = DPWH_CRACK_TYPES;
@@ -40,6 +41,10 @@ export const CRACK_TYPE_DETAILS: Record<CrackType, { label: string; description:
   reflection: {
     label: 'Reflection crack',
     description: 'A crack in asphalt that mirrors joints in the underlying concrete.',
+  },
+  pothole: {
+    label: 'Pothole',
+    description: 'A bowl-shaped pavement defect caused by material loss.',
   },
 };
 

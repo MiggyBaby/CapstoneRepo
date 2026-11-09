@@ -3,13 +3,13 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { FiHome, FiMap, FiBarChart2, FiSettings, FiChevronDown, FiImage, FiFileText } from 'react-icons/fi';
+import { FiHome, FiMap, FiBarChart2, FiSettings, FiChevronDown, FiImage, FiFileText, FiCheckSquare } from 'react-icons/fi';
 import { GiRoad } from 'react-icons/gi';
 
 interface MenuItem {
   label: string;
   href: string;
-  iconName: 'home' | 'crack' | 'map' | 'chart' | 'gallery' | 'reports' | 'settings';
+  iconName: 'home' | 'crack' | 'map' | 'chart' | 'gallery' | 'reports' | 'inspections' | 'settings';
 }
 
 const getIcon = (iconName: string) => {
@@ -26,6 +26,8 @@ const getIcon = (iconName: string) => {
       return <FiImage size={20} className="flex-shrink-0" />;
     case 'reports':
       return <FiFileText size={20} className="flex-shrink-0" />;
+    case 'inspections':
+      return <FiCheckSquare size={20} className="flex-shrink-0" />;
     case 'settings':
       return <FiSettings size={20} className="flex-shrink-0" />;
     default:
@@ -61,6 +63,11 @@ export default function Sidebar() {
       label: 'Reports',
       href: '/reports',
       iconName: 'reports',
+    },
+    {
+      label: 'Forwarded Inspections',
+      href: '/inspections',
+      iconName: 'inspections',
     },
     {
       label: 'Gallery',

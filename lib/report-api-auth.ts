@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-export type WebsiteRole = 'admin' | 'inspector' | 'worker' | 'viewer';
+export type WebsiteRole = 'admin' | 'inspector' | 'worker' | 'viewer' | 'reviewer';
 
-const knownRoles = new Set<WebsiteRole>(['admin', 'inspector', 'worker', 'viewer']);
+const knownRoles = new Set<WebsiteRole>(['admin', 'inspector', 'worker', 'viewer', 'reviewer']);
 
 /** Verify the caller's JWT with Supabase Auth before allowing service-role access. */
 export async function authorizeReportRequest(
@@ -15,7 +15,9 @@ export async function authorizeReportRequest(
   if (!match) return NextResponse.json({ success: false, error: 'Sign in to continue.' }, { status: 401 });
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+    || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    || process.env.SUPABASE_PUBLISHABLE_KEY;
   if (!url || !key) {
     console.error('Report API auth is not configured: Supabase URL or publishable key is missing.');
     return NextResponse.json({ success: false, error: 'Authentication is temporarily unavailable.' }, { status: 500 });

@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, Text, TextInput, View } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { Busy, C, DetectionCard, Heading, Page, Problem, s } from '@/components/ui';
 import { FilterDropdownPanel, type DropdownFilterSection } from '@/components/filter-dropdown-panel';
 import { fetchDetections, PAGE_SIZE } from '@/services/detections';
@@ -15,7 +16,7 @@ export default function Detections() {
   const load = useCallback(async (reset = true) => { try { setError(''); if (reset) offset.current = 0; const next = await fetchDetections({ offset: reset ? 0 : offset.current, search, severity: filters.severity, status: filters.status, crackType: filters.crackType, detectedAfter }); offset.current = reset ? next.length : offset.current + next.length; setRows(old => reset ? next : mergeById(old, next)); setMore(next.length === PAGE_SIZE); } catch (e) { setError(e instanceof Error ? e.message : 'Could not load detections.'); } finally { setLoading(false); setRefreshing(false); setLoadingMore(false); } }, [search, filters, detectedAfter]);
   const dropdownSections = useMemo<DropdownFilterSection[]>(() => [
     { id: 'severity', title: 'Crack severity', value: draft.severity, options: [{ label: 'All severities', value: '' }, ...(['low', 'medium', 'high', 'critical'] as Severity[]).map(value => ({ label: value[0].toUpperCase() + value.slice(1), value }))] },
-    { id: 'crackType', title: 'Crack type', value: draft.crackType, options: [{ label: 'All types', value: '' }, ...(['transverse', 'longitudinal', 'block', 'corner', 'diagonal', 'meandering', 'reflection'] as Crack['crack_type'][]).map(value => ({ label: value[0].toUpperCase() + value.slice(1), value }))] },
+    { id: 'crackType', title: 'Road defect type', value: draft.crackType, options: [{ label: 'All types', value: '' }, ...(['transverse', 'longitudinal', 'block', 'corner', 'diagonal', 'meandering', 'reflection', 'pothole'] as Crack['crack_type'][]).map(value => ({ label: value[0].toUpperCase() + value.slice(1), value }))] },
     { id: 'status', title: 'Report status', value: draft.status, options: [{ label: 'All statuses', value: '' }, ...(['new', 'assigned', 'in-progress', 'resolved'] as CrackStatus[]).map(value => ({ label: value.replace('-', ' ').replace(/\b\w/g, letter => letter.toUpperCase()), value }))] },
     { id: 'date', title: 'Detection date', value: draft.date, options: [{ label: 'All time', value: '' }, { label: 'Today', value: 'today' }, { label: 'Last 7 days', value: '7d' }, { label: 'Last 30 days', value: '30d' }] },
   ], [draft]);
@@ -29,7 +30,7 @@ export default function Detections() {
   }
   function applyFilters() { setFilters(draft); setFilterOpen(false); }
   function resetFilters() { setDraft(NO_FILTERS); }
-  useEffect(() => { setLoading(true); void load(true); }, [load]);
+  useFocusEffect(useCallback(() => { void load(true); }, [load]));
   return <Page>
     <View style={styles.header}><View style={{ flex: 1, minWidth: 0 }}><Heading title="Detection history" subtitle="Search and filter records from Supabase." /></View><Pressable accessibilityRole="button" accessibilityLabel={`Filters${activeFilters ? `, ${activeFilters} active` : ''}`} onPress={openFilters} style={styles.filterButton}><Text style={styles.filterIcon}>☷</Text><Text style={styles.filterText}>Filters</Text>{activeFilters > 0 ? <View style={styles.badge}><Text style={styles.badgeText}>{activeFilters}</Text></View> : null}</Pressable></View>
     <TextInput style={s.input} placeholder="Search by location" value={search} onChangeText={setSearch} returnKeyType="search" />
