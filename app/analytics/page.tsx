@@ -1,39 +1,52 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { FiBarChart2, FiTrendingUp, FiPercent, FiFileText, FiPlus } from 'react-icons/fi';
 import StatCard from '@/components/StatCard';
-import { AnalyticsData, fetchAnalytics, fetchCracks, fetchDistrictSummaries } from '@/lib/api-client';
-import type { Crack, DistrictSummary, ReportDefectCode } from '@/lib/types';
+import { AnalyticsData, fetchAnalytics, fetchDistrictSummaries } from '@/lib/api-client';
+import type { DistrictSummary, ReportDefectCode } from '@/lib/types';
 import { REPORT_DEFECTS } from '@/lib/report-defects';
+import { useLiveRefresh } from '@/lib/use-live-refresh';
 
 export default function AnalyticsPage() {
   const [activeTab, setActiveTab] = useState<'summary' | 'analytics'>('summary');
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
-  const [cracks, setCracks] = useState<Crack[]>([]);
   const [summaries, setSummaries] = useState<DistrictSummary[]>([]);
   const [selectedSummaryId, setSelectedSummaryId] = useState<string | null>(null);
   const [summariesError, setSummariesError] = useState('');
+  const [analyticsError, setAnalyticsError] = useState('');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    Promise.allSettled([fetchAnalytics(), fetchCracks({ limit: 500 }), fetchDistrictSummaries()])
-      .then(([analyticsResult, cracksResult, summariesResult]) => {
-        if (analyticsResult.status === 'fulfilled') setAnalytics(analyticsResult.value);
-        else console.error('Unable to load analytics from Supabase:', analyticsResult.reason);
-        if (cracksResult.status === 'fulfilled') setCracks(cracksResult.value);
-        else console.error('Unable to load crack records for analytics:', cracksResult.reason);
-        if (summariesResult.status === 'fulfilled') {
-          setSummaries(summariesResult.value);
-          setSummariesError('');
-          const requestedSummary = new URLSearchParams(window.location.search).get('summary');
-          setSelectedSummaryId(requestedSummary || summariesResult.value[0]?.id || null);
-        }
-        else setSummariesError(summariesResult.reason instanceof Error ? summariesResult.reason.message : 'Could not load district summaries.');
-      })
-      .finally(() => setLoading(false));
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    const [analyticsResult, summariesResult] = await Promise.allSettled([
+      fetchAnalytics(), fetchDistrictSummaries(),
+    ]);
+    if (analyticsResult.status === 'fulfilled') {
+      setAnalytics(analyticsResult.value);
+      setAnalyticsError('');
+    } else {
+      console.error('Unable to load analytics from Supabase:', analyticsResult.reason);
+      setAnalyticsError(analyticsResult.reason instanceof Error ? analyticsResult.reason.message : 'Could not load database analytics.');
+    }
+    if (summariesResult.status === 'fulfilled') {
+      setSummaries(summariesResult.value);
+      setSummariesError('');
+      setSelectedSummaryId(current => {
+        if (current && summariesResult.value.some(summary => summary.id === current)) return current;
+        const requestedSummary = new URLSearchParams(window.location.search).get('summary');
+        return requestedSummary || summariesResult.value[0]?.id || null;
+      });
+    } else {
+      console.error('Unable to load district summaries:', summariesResult.reason);
+      setSummariesError(summariesResult.reason instanceof Error ? summariesResult.reason.message : 'Could not load district summaries.');
+    }
+    setLoading(false);
   }, []);
+
+  useEffect(() => { void load(); }, [load]);
+  useLiveRefresh(() => { void load(true); });
 
   const cracksByType = analytics?.cracksByType ?? {};
   const cracksBySeverity = {
@@ -45,9 +58,8 @@ export default function AnalyticsPage() {
 
   const totalCracks = analytics?.totalCracks ?? 0;
   const resolvedCracks = analytics?.resolvedCracks ?? 0;
-  const activeCracks = Math.max(totalCracks - resolvedCracks, 0);
   const resolutionRate = totalCracks ? ((resolvedCracks / totalCracks) * 100).toFixed(1) : '0.0';
-  const detectionAccuracy = totalCracks ? ((Math.max(0, totalCracks - (analytics?.inProgressCracks ?? 0)) / totalCracks) * 100).toFixed(1) : '0.0';
+  const evidenceCoverage = totalCracks ? (((analytics?.evidenceCracks ?? 0) / totalCracks) * 100).toFixed(1) : '0.0';
 
   const selectedSummary = summaries.find((summary) => summary.id === selectedSummaryId) ?? summaries[0] ?? null;
   const summaryTotals = useMemo(() => REPORT_DEFECTS.reduce((totals, defect) => {
@@ -58,22 +70,7 @@ export default function AnalyticsPage() {
     return totals;
   }, {} as Partial<Record<ReportDefectCode, number>>), [selectedSummary]);
 
-  const weeklyData = useMemo(() => {
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const counts = Array.from({ length: 7 }, (_, index) => ({
-      day: days[index],
-      count: 0,
-    }));
-
-    cracks.forEach((crack) => {
-      const date = new Date(crack.detectedAt as string);
-      if (Number.isNaN(date.getTime())) return;
-      const dayIndex = date.getDay();
-      counts[dayIndex].count += 1;
-    });
-
-    return counts;
-  }, [cracks]);
+  const weeklyData = analytics?.weeklyTrend ?? [];
 
   if (loading) {
     return (
@@ -250,11 +247,12 @@ export default function AnalyticsPage() {
         </section>
       ) : (
         <section id="analytics-panel" role="tabpanel" aria-labelledby="analytics-tab" className="space-y-8">
+      {analyticsError ? <p role="alert" className="border-l-4 border-red-500 bg-red-50 px-4 py-3 text-sm text-red-800">{analyticsError}</p> : null}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard icon={FiBarChart2} label="Total Cracks" value={totalCracks} change="Live" color="primary" />
-        <StatCard icon={FiTrendingUp} label="Resolved" value={resolvedCracks} change="Live" color="success" />
-        <StatCard icon={FiPercent} label="Resolution Rate" value={`${resolutionRate}%`} change="Live" color="primary" />
-        <StatCard icon={FiTrendingUp} label="Detection Accuracy" value={`${detectionAccuracy}%`} change="Live" color="secondary" />
+        <StatCard icon={FiBarChart2} label="Total Cracks" value={totalCracks} color="primary" />
+        <StatCard icon={FiTrendingUp} label="Resolved" value={resolvedCracks} color="success" />
+        <StatCard icon={FiPercent} label="Resolution Rate" value={`${resolutionRate}%`} color="primary" />
+        <StatCard icon={FiTrendingUp} label="Open Records" value={analytics?.openCracks ?? 0} color="secondary" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -343,35 +341,35 @@ export default function AnalyticsPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="card">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-gray-900">Avg. Detection Time</h3>
+            <h3 className="font-bold text-gray-900">Average Time to Resolution</h3>
             <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
               <FiTrendingUp className="text-primary-600" size={24} />
             </div>
           </div>
-          <p className="text-3xl font-bold text-gray-900">{totalCracks ? (2.4).toFixed(1) : '0.0'}h</p>
-          <p className="text-sm text-gray-500 mt-2">Time to detect and report</p>
+          <p className="text-3xl font-bold text-gray-900">{analytics?.averageResolutionHours == null ? '—' : `${analytics.averageResolutionHours.toFixed(1)}h`}</p>
+          <p className="text-sm text-gray-500 mt-2">Average from detection to recorded resolution</p>
         </div>
 
         <div className="card">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-gray-900">Detection Accuracy</h3>
+            <h3 className="font-bold text-gray-900">Evidence Coverage</h3>
             <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
               <FiPercent className="text-green-600" size={24} />
             </div>
           </div>
-          <p className="text-3xl font-bold text-gray-900">{detectionAccuracy}%</p>
-          <p className="text-sm text-gray-500 mt-2">System accuracy rate</p>
+          <p className="text-3xl font-bold text-gray-900">{evidenceCoverage}%</p>
+          <p className="text-sm text-gray-500 mt-2">{analytics?.evidenceCracks ?? 0} records with an evidence image</p>
         </div>
 
         <div className="card">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-gray-900">Avg. Response Time</h3>
+            <h3 className="font-bold text-gray-900">Evidence Images</h3>
             <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
               <FiBarChart2 className="text-orange-600" size={24} />
             </div>
           </div>
-          <p className="text-3xl font-bold text-gray-900">4.2h</p>
-          <p className="text-sm text-gray-500 mt-2">Time to dispatch workers</p>
+          <p className="text-3xl font-bold text-gray-900">{analytics?.evidenceCracks ?? 0}</p>
+          <p className="text-sm text-gray-500 mt-2">Stored on database records</p>
         </div>
       </div>
 

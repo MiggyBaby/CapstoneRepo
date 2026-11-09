@@ -12,6 +12,8 @@ interface WebsitePreferences {
   compactTables: boolean;
 }
 
+type TogglePreference = 'emailNotifications' | 'detectionAlerts' | 'compactTables';
+
 const defaultPreferences: WebsitePreferences = {
   theme: 'light',
   emailNotifications: true,
@@ -20,7 +22,7 @@ const defaultPreferences: WebsitePreferences = {
 };
 
 const preferenceOptions: Array<{
-  key: keyof WebsitePreferences;
+  key: TogglePreference;
   title: string;
   description: string;
 }> = [

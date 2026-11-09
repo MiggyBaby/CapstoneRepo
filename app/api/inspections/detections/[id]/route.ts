@@ -34,6 +34,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   if (!['mark_reviewed', 'mark_pending', 'mark_duplicate'].includes(String(action))) {
     return NextResponse.json({ success: false, error: 'Select a valid inspection action.' }, { status: 400 });
   }
+  const { id } = await params;
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
 
   if ('location' in body) {
@@ -78,6 +79,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
       updates[column] = value;
     }
   }
+
   if ('image_url' in body) {
     const url = body.image_url;
     if (url !== null && typeof url !== 'string') {
@@ -90,6 +92,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
         return NextResponse.json({ success: false, error: 'Evidence image URL must be a valid HTTPS URL.' }, { status: 400 });
       }
     }
+
     updates.image_url = url;
   }
   if ('status' in body) {
@@ -116,7 +119,20 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   }
 
   try {
-    const { id } = await params;
+    const { data: existing, error: existingError } = await getSupabaseAdmin()
+      .from('cracks')
+      .select('review_state')
+      .eq('id', id)
+      .maybeSingle();
+    if (existingError) throw existingError;
+    if (!existing) return NextResponse.json({ success: false, error: 'Detection not found.' }, { status: 404 });
+    if (existing.review_state === 'forwarded' && action !== 'mark_reviewed') {
+      return NextResponse.json(
+        { success: false, error: 'A forwarded detection can only be edited by creating a follow-up review.' },
+        { status: 409 },
+      );
+    }
+
     if (reviewState === 'duplicate') {
       if (body.duplicateOfId === id) {
         return NextResponse.json({ success: false, error: 'A detection cannot be marked as a duplicate of itself.' }, { status: 400 });
@@ -136,14 +152,50 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
       .from('cracks')
       .update(updates)
       .eq('id', id)
-      .neq('review_state', 'forwarded')
       .select('*')
       .maybeSingle();
     if (error) throw error;
-    if (!data) return NextResponse.json({ success: false, error: 'Detection not found or already forwarded.' }, { status: 404 });
+    if (!data) return NextResponse.json({ success: false, error: 'Detection not found.' }, { status: 404 });
     return NextResponse.json({ success: true, data });
   } catch (error) {
     console.error('Error updating inspection detection:', error);
     return NextResponse.json({ success: false, error: 'Could not save inspection changes.' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest, { params }: RouteContext) {
+  const authorization = await authorizeReportRequest(request, ['admin', 'inspector']);
+  if (isAuthorizationResponse(authorization)) return authorization;
+
+  try {
+    const { id } = await params;
+    const { data, error } = await getSupabaseAdmin()
+      .from('cracks')
+      .delete()
+      .eq('id', id)
+      .neq('review_state', 'forwarded')
+      .select('id')
+      .maybeSingle();
+
+    if (error) {
+      if (error.code === '23503') {
+        return NextResponse.json(
+          { success: false, error: 'This detection is referenced by another inspection record and cannot be deleted.' },
+          { status: 409 },
+        );
+      }
+      throw error;
+    }
+    if (!data) {
+      return NextResponse.json(
+        { success: false, error: 'Detection not found or already forwarded.' },
+        { status: 404 },
+      );
+    }
+
+    return NextResponse.json({ success: true, data });
+  } catch (error) {
+    console.error('Error deleting inspector detection:', error);
+    return NextResponse.json({ success: false, error: 'Could not delete this inspection record.' }, { status: 500 });
   }
 }

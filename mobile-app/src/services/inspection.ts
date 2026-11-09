@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { refreshAccessToken } from '@/lib/auth-session';
 import type { Crack, CrackReviewNote, InspectionBatch } from '@/types/database';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL?.replace(/\/+$/, '');
@@ -23,7 +24,20 @@ async function inspectionRequest<T>(path: string, init?: RequestInit): Promise<T
   const headers = new Headers(init?.headers);
   headers.set('Authorization', `Bearer ${data.session.access_token}`);
   if (init?.body && !(init.body instanceof FormData)) headers.set('Content-Type', 'application/json');
-  const response = await fetch(`${API_URL}${path}`, { ...init, headers });
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, { ...init, headers, cache: 'no-store' });
+  } catch {
+    throw new Error(`Could not reach the website API at ${API_URL}. Check that the website is running and that this device can reach the configured address.`);
+  }
+  if (response.status === 401) {
+    headers.set('Authorization', `Bearer ${await refreshAccessToken()}`);
+    try {
+      response = await fetch(`${API_URL}${path}`, { ...init, headers, cache: 'no-store' });
+    } catch {
+      throw new Error(`Could not reach the website API at ${API_URL}. Check that the website is running and that this device can reach the configured address.`);
+    }
+  }
   let payload: unknown;
   try {
     payload = await response.json();
@@ -37,8 +51,9 @@ async function inspectionRequest<T>(path: string, init?: RequestInit): Promise<T
   return payload.data as T;
 }
 
-export function fetchInspectionDetections(): Promise<Crack[]> {
-  return inspectionRequest<Crack[]>('/inspections/detections');
+export function fetchInspectionDetections(state?: 'forwarded'): Promise<Crack[]> {
+  const query = state ? `?state=${state}` : '';
+  return inspectionRequest<Crack[]>(`/inspections/detections${query}`);
 }
 
 export function updateInspectionDetection(
@@ -50,6 +65,37 @@ export function updateInspectionDetection(
   return inspectionRequest<Crack>(`/inspections/detections/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     body: JSON.stringify({ action, ...edits, ...(duplicateOfId ? { duplicateOfId } : {}) }),
+  });
+}
+
+export async function uploadInspectionImage(uri: string, filename: string, mimeType: string): Promise<string> {
+  let blob: Blob;
+  try {
+    const response = await fetch(uri);
+    if (!response.ok) throw new Error();
+    blob = await response.blob();
+  } catch {
+    throw new Error('Could not read the selected image. Please choose another photo.');
+  }
+  if (!blob.size) throw new Error('The selected image is empty. Please choose another photo.');
+  if (blob.size > 5 * 1024 * 1024) throw new Error('Image size must be less than 5 MB.');
+
+  const image = new Blob([blob], { type: mimeType || blob.type || 'image/jpeg' });
+  const form = new FormData();
+  form.append('file', image, filename);
+  const uploaded = await inspectionRequest<{ url: string }>('/uploads', {
+    method: 'POST',
+    body: form,
+  });
+  if (!uploaded.url || !uploaded.url.startsWith('https://')) {
+    throw new Error('The website API returned an invalid image URL.');
+  }
+  return uploaded.url;
+}
+
+export async function deleteInspectionDetection(id: string): Promise<void> {
+  await inspectionRequest<{ id: string }>(`/inspections/detections/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
   });
 }
 

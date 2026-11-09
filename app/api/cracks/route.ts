@@ -21,7 +21,8 @@ export async function GET(request: NextRequest) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
     const supabaseSecretKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
     if (!supabaseUrl || !supabaseSecretKey) {
-      return NextResponse.json({ success: true, data: [], count: 0 });
+      console.error('Crack API is not configured: Supabase URL or service key is missing.');
+      return NextResponse.json({ success: false, error: 'Detection records are temporarily unavailable.' }, { status: 500 });
     }
 
     const severity = request.nextUrl.searchParams.get('severity');
@@ -29,8 +30,10 @@ export async function GET(request: NextRequest) {
     const location = request.nextUrl.searchParams.get('location');
     const requestedLimit = Number(request.nextUrl.searchParams.get('limit') || 100);
     const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 500) : 100;
+    const requestedOffset = Number(request.nextUrl.searchParams.get('offset') || 0);
+    const offset = Number.isSafeInteger(requestedOffset) ? Math.max(requestedOffset, 0) : 0;
 
-    let query = getSupabaseAdmin().from('crack_records').select('*').order('detected_at', { ascending: false });
+    let query = getSupabaseAdmin().from('crack_records').select('*').order('detected_at', { ascending: false }).order('id', { ascending: true });
     if (severity) query = query.eq('severity', severity);
     if (crackType) {
       if (!SUPPORTED_CRACK_TYPES.includes(crackType as typeof SUPPORTED_CRACK_TYPES[number])) {
@@ -41,7 +44,7 @@ export async function GET(request: NextRequest) {
       query = query.in('crack_type', SUPPORTED_CRACK_TYPES);
     }
     if (location) query = query.ilike('location', `%${location}%`);
-    const { data, error } = await query.limit(limit);
+    const { data, error } = await query.range(offset, offset + limit - 1);
     if (error) throw error;
     const cracks = (data || []).map(toCrack);
     return NextResponse.json({ success: true, data: cracks, count: cracks.length });

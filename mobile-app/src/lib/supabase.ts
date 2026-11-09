@@ -1,12 +1,28 @@
 import 'react-native-url-polyfill/auto';
 import { createClient, type SupportedStorage } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import type { Database } from '@/types/supabase';
 
 const secureStorage: SupportedStorage = {
-  getItem: (key) => SecureStore.getItemAsync(key),
-  setItem: (key, value) => SecureStore.setItemAsync(key, value),
-  removeItem: (key) => SecureStore.deleteItemAsync(key),
+  getItem: (key) => {
+    if (Platform.OS === 'web') return Promise.resolve(typeof window === 'undefined' ? null : window.localStorage.getItem(key));
+    return SecureStore.getItemAsync(key);
+  },
+  setItem: (key, value) => {
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined') window.localStorage.setItem(key, value);
+      return Promise.resolve();
+    }
+    return SecureStore.setItemAsync(key, value);
+  },
+  removeItem: (key) => {
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined') window.localStorage.removeItem(key);
+      return Promise.resolve();
+    }
+    return SecureStore.deleteItemAsync(key);
+  },
 };
 
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL;

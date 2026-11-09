@@ -1,26 +1,49 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { FiAlertCircle, FiCheckCircle, FiClock, FiTrendingUp } from 'react-icons/fi';
 import StatCard from '@/components/StatCard';
 import CrackCard from '@/components/CrackCard';
-import { Crack } from '@/lib/types';
-import { AnalyticsData, fetchAnalytics, fetchCracks } from '@/lib/api-client';
+import type { Crack } from '@/lib/types';
+import { AnalyticsData, checkApiHealth, fetchAnalytics, fetchCracks, type HealthStatus } from '@/lib/api-client';
+import { useLiveRefresh } from '@/lib/use-live-refresh';
 
 export default function Dashboard() {
   const [cracks, setCracks] = useState<Crack[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [health, setHealth] = useState<HealthStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  useEffect(() => {
-    fetchCracks({ limit: 6 })
-      .then(setCracks)
-      .catch((error) => console.error('Unable to load cracks from Supabase:', error))
-      .finally(() => setLoading(false));
-    fetchAnalytics()
-      .then(setAnalytics)
-      .catch((error) => console.error('Unable to load dashboard analytics:', error));
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    const [crackResult, analyticsResult, healthResult] = await Promise.allSettled([
+      fetchCracks({ limit: 500 }),
+      fetchAnalytics(),
+      checkApiHealth(),
+    ]);
+    const errors: string[] = [];
+    if (crackResult.status === 'fulfilled') setCracks(crackResult.value);
+    else {
+      console.error('Unable to load dashboard cracks:', crackResult.reason);
+      errors.push('Could not load detection records.');
+    }
+    if (analyticsResult.status === 'fulfilled') setAnalytics(analyticsResult.value);
+    else {
+      console.error('Unable to load dashboard analytics:', analyticsResult.reason);
+      errors.push('Could not load database analytics.');
+    }
+    if (healthResult.status === 'fulfilled') setHealth(healthResult.value);
+    else {
+      console.error('Unable to check database connection:', healthResult.reason);
+      setHealth({ status: 'down', message: 'Health check failed', timestamp: new Date().toISOString(), version: '' });
+    }
+    setError(errors.join(' '));
+    setLoading(false);
   }, []);
+
+  useEffect(() => { void load(); }, [load]);
+  useLiveRefresh(() => { void load(true); });
 
   const stats = {
     total: analytics?.totalCracks ?? 0,
@@ -38,33 +61,30 @@ export default function Dashboard() {
       </div>
 
       {/* Statistics Grid */}
+      {error ? <p role="alert" className="border-l-4 border-red-500 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p> : null}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           icon={FiAlertCircle}
           label="Total Road Defects"
           value={stats.total}
-          change={`+${Math.floor(stats.total * 0.15)}`}
           color="primary"
         />
         <StatCard
           icon={FiTrendingUp}
           label="Critical Issues"
           value={stats.critical}
-          change={`+${Math.floor(stats.critical * 0.2)}`}
           color="secondary"
         />
         <StatCard
           icon={FiClock}
           label="In Progress"
           value={stats.inProgress}
-          change="-2"
           color="warning"
         />
         <StatCard
           icon={FiCheckCircle}
           label="Resolved"
           value={stats.resolved}
-          change={`+${Math.floor(stats.resolved * 0.1)}`}
           color="success"
         />
       </div>
@@ -96,6 +116,7 @@ export default function Dashboard() {
                 coordinates={crack.coordinates}
               />
             ))}
+            {!cracks.length && !loading ? <p className="col-span-full py-8 text-center text-sm text-gray-600">No detection records are currently in the database.</p> : null}
           </div>
         )}
       </div>
@@ -108,23 +129,20 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">API Status</span>
               <span className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-xs font-medium text-green-600">Operational</span>
+                <div className={`w-2 h-2 rounded-full ${health?.status === 'operational' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                <span className={`text-xs font-medium ${health?.status === 'operational' ? 'text-green-600' : 'text-red-600'}`}>{health?.status === 'operational' ? 'Operational' : 'Unavailable'}</span>
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">Database</span>
               <span className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-xs font-medium text-green-600">Connected</span>
+                <div className={`w-2 h-2 rounded-full ${health?.status === 'operational' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                <span className={`text-xs font-medium ${health?.status === 'operational' ? 'text-green-600' : 'text-red-600'}`}>{health?.status === 'operational' ? 'Connected' : 'Unavailable'}</span>
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">Camera Feed</span>
-              <span className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                <span className="text-xs font-medium text-yellow-600">Standby</span>
-              </span>
+              <span className="text-xs font-medium text-gray-500">Not connected</span>
             </div>
           </div>
         </div>
@@ -132,20 +150,16 @@ export default function Dashboard() {
         <div className="card">
           <h3 className="font-bold text-gray-900 mb-4">Latest Activity</h3>
           <div className="space-y-3 text-sm">
-            <div className="flex items-start space-x-3">
-              <div className="w-2 h-2 bg-primary-500 rounded-full mt-1.5 flex-shrink-0"></div>
-              <div>
-                <p className="text-gray-900 font-medium">New critical crack detected</p>
-                <p className="text-gray-500 text-xs">5 minutes ago</p>
+            {cracks.slice(0, 4).map(crack => (
+              <div key={crack.id} className="flex items-start space-x-3">
+                <div className="w-2 h-2 bg-primary-500 rounded-full mt-1.5 flex-shrink-0"></div>
+                <div className="min-w-0">
+                  <p className="text-gray-900 font-medium">{crack.crackType} detected · {crack.severity} · {crack.location}</p>
+                  <p className="text-gray-500 text-xs">{new Date(crack.detectedAt).toLocaleString()}</p>
+                </div>
               </div>
-            </div>
-            <div className="flex items-start space-x-3">
-              <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5 flex-shrink-0"></div>
-              <div>
-                <p className="text-gray-900 font-medium">Crack repair completed</p>
-                <p className="text-gray-500 text-xs">1 hour ago</p>
-              </div>
-            </div>
+            ))}
+            {!cracks.length ? <p className="text-gray-500">No detection activity recorded.</p> : null}
           </div>
         </div>
 
@@ -153,16 +167,17 @@ export default function Dashboard() {
           <h3 className="font-bold text-gray-900 mb-4">Quick Stats</h3>
           <div className="space-y-3 text-sm">
             <div>
-              <p className="text-gray-600 text-xs uppercase tracking-wide mb-1">Detection Rate</p>
+              <p className="text-gray-600 text-xs uppercase tracking-wide mb-1">Open records</p>
               <div className="flex items-end space-x-2">
-                <p className="text-2xl font-bold text-primary-600">94%</p>
-                <p className="text-xs text-green-600">+2% today</p>
+                <p className="text-2xl font-bold text-primary-600">{analytics?.openCracks ?? 0}</p>
+                <p className="text-xs text-gray-500">from database</p>
               </div>
             </div>
             <div>
-              <p className="text-gray-600 text-xs uppercase tracking-wide mb-1">Avg. Response Time</p>
-              <p className="text-lg font-bold text-gray-900">2.4 hours</p>
+              <p className="text-gray-600 text-xs uppercase tracking-wide mb-1">Average time to resolve</p>
+              <p className="text-lg font-bold text-gray-900">{analytics?.averageResolutionHours == null ? 'No resolved records' : `${analytics.averageResolutionHours.toFixed(1)} hours`}</p>
             </div>
+            <div><p className="text-gray-600 text-xs uppercase tracking-wide mb-1">Records with evidence images</p><p className="text-lg font-bold text-gray-900">{analytics?.evidenceCracks ?? 0}</p></div>
           </div>
         </div>
       </div>

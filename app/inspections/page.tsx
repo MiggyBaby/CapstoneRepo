@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { FiRefreshCw } from 'react-icons/fi';
 import { getSupabaseClient } from '@/lib/supabase';
+import { useLiveRefresh } from '@/lib/use-live-refresh';
 
 type ForwardedDetection = {
   id: string;
@@ -65,6 +66,7 @@ export default function InspectionsPage() {
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+  useLiveRefresh(() => { void load(); });
 
   const reviewBatch = async (batchId: string, review_status: 'reviewed' | 'changes_requested') => {
     try {

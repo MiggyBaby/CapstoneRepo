@@ -8,6 +8,7 @@ export type Crack = {
   source_device_id: string | null; source_detection_id: string | null;
   review_state: 'pending' | 'reviewed' | 'duplicate' | 'forwarded';
   duplicate_of_id: string | null; reviewed_by: string | null; reviewed_at: string | null;
+  return_review_note?: string | null; return_reviewed_at?: string | null;
   detected_at: string; resolved_at: string | null; created_at: string; updated_at: string;
 };
 export type CrackReviewNote = {

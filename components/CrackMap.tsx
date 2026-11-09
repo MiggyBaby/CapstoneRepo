@@ -1,14 +1,15 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { FiInfo, FiX } from 'react-icons/fi';
 import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { Crack } from '@/lib/types';
-import { fetchCracks } from '@/lib/api-client';
+import { fetchAllCracks } from '@/lib/api-client';
 import { getCrackTypeDetails } from '@/lib/crack-types';
 import { getCrackImageUrl } from '@/lib/crack-images';
+import { useLiveRefresh } from '@/lib/use-live-refresh';
 
 const severityConfig = {
   low: { color: 'bg-green-500', label: 'Low', mapColor: '#22c55e' },
@@ -20,32 +21,17 @@ const severityConfig = {
 const MINDANAO_CENTER: L.LatLngTuple = [7.7, 124.2];
 const MINDANAO_BOUNDS = L.latLngBounds([5.2, 121.3], [10.0, 126.7]);
 
-function getDemoDetailEntries(crack: Crack) {
-  const roadSection = crack.location.includes(',') ? crack.location.split(',')[0].trim() : 'Road Section';
-  const landmark = crack.location.includes(',') ? crack.location.split(',').slice(1).join(',').trim() : 'Nearby landmark';
+function getCrackDetailEntries(crack: Crack) {
   const defect = getCrackTypeDetails(crack.crackType);
-  const quantityMeters = Math.max(8, Math.round((crack.width ?? 1) * 16 + (crack.length ?? 30) / 10));
-  const actionTaken = crack.severity === 'critical' || crack.severity === 'high'
-    ? 'Routine maintenance and quick response first; if the defect spans the entire stretch, it must be endorsed to planning for reblocking, project treatment, or a bigger funding request.'
-    : 'Routine maintenance and rectification. Minor or major is not written here; it is a routine defect and will be repaired through fast response and palliative works.';
-
   return [
-    { label: 'Road section', value: roadSection },
-    { label: 'Landmark', value: landmark || 'Routine inspection area' },
-    {
-      label: 'Defect',
-      value: `${defect.label}: ${defect.description}`,
-    },
-    { label: 'Action taken', value: actionTaken },
-    { label: 'Quantity', value: `${quantityMeters} linear meters` },
-    {
-      label: 'Date & Time',
-      value: new Date(crack.detectedAt as string).toLocaleString(),
-    },
-    {
-      label: 'BEFORE / DURING / AFTER',
-      value: 'BEFORE: visible crack with surface deterioration. DURING: sealing, patching, and temporary lane protection. AFTER: repaired surface, compacted patch, and monitoring for recurrence.',
-    },
+    { label: 'Defect classification', value: `${defect.label}: ${defect.description}` },
+    { label: 'Severity', value: crack.severity },
+    { label: 'Workflow status', value: crack.status.replace(/-/g, ' ') },
+    { label: 'Width', value: crack.width == null ? 'Not recorded' : `${crack.width} mm` },
+    { label: 'Length', value: crack.length == null ? 'Not recorded' : `${crack.length} mm` },
+    { label: 'Depth', value: crack.depth == null ? 'Not recorded' : `${crack.depth} mm` },
+    { label: 'Detected', value: new Date(crack.detectedAt as string).toLocaleString() },
+    ...(crack.description ? [{ label: 'Database description', value: crack.description }] : []),
   ];
 }
 
@@ -87,20 +73,25 @@ export default function CrackMap() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchCracks({ limit: 200 })
-      .then((data) => {
-        const mindanaoCracks = data.filter(isInMindanao);
-        setCracks(mindanaoCracks);
-        setSelectedCrack(mindanaoCracks[0] ?? null);
-      })
-      .catch((error) => {
-        setCracks([]);
-        setSelectedCrack(null);
-        setLoadError(error instanceof Error ? error.message : 'Unable to load crack map data.');
-      })
-      .finally(() => setLoading(false));
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    try {
+      const data = await fetchAllCracks();
+      const mindanaoCracks = data.filter(isInMindanao);
+      setCracks(mindanaoCracks);
+      setSelectedCrack(current => mindanaoCracks.find(crack => crack.id === current?.id) ?? mindanaoCracks[0] ?? null);
+      setLoadError(null);
+    } catch (error) {
+      setCracks([]);
+      setSelectedCrack(null);
+      setLoadError(error instanceof Error ? error.message : 'Unable to load crack map data.');
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => { void load(); }, [load]);
+  useLiveRefresh(() => { void load(true); });
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -190,12 +181,13 @@ export default function CrackMap() {
             </div>
 
             <div className="flex-1 space-y-4">
-              <div className="w-full h-32 bg-gray-200 rounded-lg overflow-hidden">
+              <div className="relative w-full h-32 bg-gray-200 rounded-lg overflow-hidden">
                 <img
                   src={getCrackImageUrl(selectedCrack.imageUrl, selectedCrack.crackType)}
-                  alt={selectedCrack.location}
+                  alt={selectedCrack.imageUrl ? `Road defect evidence for ${selectedCrack.location}` : `Example road defect image for ${selectedCrack.location}`}
                   className="w-full h-full object-cover"
                 />
+                {!selectedCrack.imageUrl ? <span className="absolute bottom-3 left-3 rounded bg-black/70 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">Example image · evidence not attached</span> : null}
               </div>
 
               <div>
@@ -207,7 +199,7 @@ export default function CrackMap() {
               </div>
 
               <div className="space-y-3">
-                {getDemoDetailEntries(selectedCrack).map(({ label, value }) => (
+                {getCrackDetailEntries(selectedCrack).map(({ label, value }) => (
                   <div key={label} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-600">{label}</p>
                     <p className="mt-1 text-sm text-gray-800">{value}</p>

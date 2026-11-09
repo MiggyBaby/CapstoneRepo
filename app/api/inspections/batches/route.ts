@@ -11,11 +11,23 @@ export async function GET(request: NextRequest) {
   try {
     const { data, error } = await getSupabaseAdmin()
       .from('inspection_batches')
-      .select('id,submitted_by,submitted_at,review_status,department_note,reviewed_by,reviewed_at,inspection_batch_items(crack_id,cracks(id,location,latitude,longitude,image_url,crack_type,severity,status,width_mm,length_mm,depth_mm,description,detected_at,source_device_id,review_state,crack_review_notes(id,author_id,note,created_at)))')
+      .select('id,submitted_by,submitted_at,review_status,department_note,reviewed_by,reviewed_at,inspection_batch_items(crack_id,crack_snapshot,crack_review_notes_snapshot,cracks(id,location,latitude,longitude,image_url,crack_type,severity,status,width_mm,length_mm,depth_mm,description,detected_at,source_device_id,review_state,crack_review_notes(id,author_id,note,created_at)))')
       .order('submitted_at', { ascending: false })
       .limit(200);
     if (error) throw error;
-    return NextResponse.json({ success: true, data: data ?? [] });
+    const batches = (data ?? []).map(batch => ({
+      ...batch,
+      inspection_batch_items: batch.inspection_batch_items.map(item => ({
+        ...item,
+        cracks: item.crack_snapshot
+          ? {
+            ...item.crack_snapshot,
+            crack_review_notes: item.crack_review_notes_snapshot,
+          }
+          : item.cracks,
+      })),
+    }));
+    return NextResponse.json({ success: true, data: batches });
   } catch (error) {
     console.error('Error loading forwarded inspection batches:', error);
     return NextResponse.json({ success: false, error: 'Could not load forwarded inspections.' }, { status: 500 });

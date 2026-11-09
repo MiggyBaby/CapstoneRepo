@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -9,27 +9,7 @@ import { Crack } from '@/lib/types';
 import { fetchCrackById } from '@/lib/api-client';
 import { getCrackTypeDetails } from '@/lib/crack-types';
 import { getCrackImageUrl } from '@/lib/crack-images';
-
-function parseDemoFieldText(description?: string) {
-  const entries: { label: string; value: string }[] = [];
-  if (!description) return entries;
-
-  for (const part of description.split(';')) {
-    const trimmed = part.trim();
-    if (!trimmed) continue;
-    const colonIndex = trimmed.indexOf(':');
-    if (colonIndex === -1) {
-      entries.push({ label: 'Note', value: trimmed });
-      continue;
-    }
-
-    const label = trimmed.slice(0, colonIndex).trim();
-    const value = trimmed.slice(colonIndex + 1).trim();
-    entries.push({ label, value });
-  }
-
-  return entries;
-}
+import { useLiveRefresh } from '@/lib/use-live-refresh';
 
 export default function CrackDetailPage() {
   const params = useParams<{ id: string }>();
@@ -38,22 +18,23 @@ export default function CrackDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!id) return;
 
-    fetchCrackById(id)
-      .then((data) => {
-        setCrack(data);
-        setError(null);
-      })
-      .catch((err) => {
-        console.error('Unable to load crack details:', err);
-        setError('Unable to load crack details.');
-      })
-      .finally(() => setLoading(false));
+    try {
+      const data = await fetchCrackById(id);
+      setCrack(data);
+      setError(null);
+    } catch (cause) {
+      console.error('Unable to load crack details:', cause);
+      setError(cause instanceof Error ? cause.message : 'Unable to load crack details.');
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
 
-  const detailEntries = useMemo(() => parseDemoFieldText(crack?.description), [crack?.description]);
+  useEffect(() => { void load(); }, [load]);
+  useLiveRefresh(() => { void load(); });
 
   if (!id) {
     return <div className="p-6 text-red-600">Invalid crack reference.</div>;
@@ -115,13 +96,11 @@ export default function CrackDetailPage() {
             <div className="card">
               <h2 className="text-lg font-bold text-gray-900 mb-4">Inspection Summary</h2>
               <div className="space-y-3">
-                {detailEntries.length > 0 ? (
-                  detailEntries.map(({ label, value }) => (
-                    <div key={`${label}-${value}`} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-600">{label}</p>
-                      <p className="mt-1 text-sm text-gray-800">{value}</p>
-                    </div>
-                  ))
+                {crack.description ? (
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-600">Database description</p>
+                    <p className="mt-1 text-sm text-gray-800">{crack.description}</p>
+                  </div>
                 ) : (
                   <div className="rounded-lg border border-dashed border-gray-300 p-4 text-sm text-gray-600">
                     No detailed inspection notes are available for this record.

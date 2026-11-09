@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { Badge, Busy, C, Heading, Page, Panel, Problem, label, s } from '@/components/ui';
 import { useAuth } from '@/features/auth/AuthProvider';
-import { addInspectionNote, fetchInspectionNotes, updateInspectionDetection } from '@/services/inspection';
+import { addInspectionNote, fetchInspectionNotes, updateInspectionDetection, uploadInspectionImage, type InspectionEdits } from '@/services/inspection';
 import { fetchDetection } from '@/services/detections';
 import type { Crack, CrackReviewNote, CrackStatus } from '@/types/database';
 import { updateDetectionStatus } from '@/services/review';
@@ -26,6 +27,7 @@ export default function DetectionDetail() {
   const [crackType, setCrackType] = useState<Crack['crack_type']>('transverse');
   const [severity, setSeverity] = useState<Crack['severity']>('low');
   const [imageUrl, setImageUrl] = useState('');
+  const [selectedImage, setSelectedImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [width, setWidth] = useState('');
   const [length, setLength] = useState('');
   const [depth, setDepth] = useState('');
@@ -34,6 +36,7 @@ export default function DetectionDetail() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -66,11 +69,11 @@ export default function DetectionDetail() {
   const isForwarded = item?.review_state === 'forwarded';
 
   async function saveReview(action: 'mark_reviewed' | 'mark_pending' | 'mark_duplicate') {
-    if (!item || saving || !canInspect || isForwarded) return;
+    if (!item || saving || imageUploading || !canInspect || (isForwarded && action !== 'mark_reviewed')) return;
     setSaving(true);
     setError('');
     try {
-      const edits = action === 'mark_duplicate' || action === 'mark_pending' ? {} : {
+      const edits: InspectionEdits = action === 'mark_duplicate' || action === 'mark_pending' ? {} : {
         location: location.trim(),
         coordinates: { lat: Number(latitude), lng: Number(longitude) },
         crack_type: crackType,
@@ -82,12 +85,21 @@ export default function DetectionDetail() {
       };
       if (action === 'mark_reviewed') {
         if (!edits.location) throw new Error('Location is required.');
-        if (!Number.isFinite(edits.coordinates.lat) || edits.coordinates.lat < -90 || edits.coordinates.lat > 90
-          || !Number.isFinite(edits.coordinates.lng) || edits.coordinates.lng < -180 || edits.coordinates.lng > 180) {
+        const coordinates = edits.coordinates;
+        if (!coordinates || !Number.isFinite(coordinates.lat) || coordinates.lat < -90 || coordinates.lat > 90
+          || !Number.isFinite(coordinates.lng) || coordinates.lng < -180 || coordinates.lng > 180) {
           throw new Error('Enter valid latitude and longitude coordinates.');
         }
         if (edits.width_mm === undefined || edits.length_mm === undefined || edits.depth_mm === undefined) {
           throw new Error('Measurements must be zero or greater, or left blank.');
+        }
+        if (selectedImage) {
+          const mimeType = selectedImage.mimeType ?? 'image/jpeg';
+          const extension = mimeType.split('/')[1]?.replace(/[^a-z0-9]/gi, '') || 'jpg';
+          const filename = selectedImage.fileName || `evidence-${Date.now()}.${extension}`;
+          edits.image_url = await uploadInspectionImage(selectedImage.uri, filename, mimeType);
+          setImageUrl(edits.image_url);
+          setSelectedImage(null);
         }
       }
       const updated = await updateInspectionDetection(
@@ -103,14 +115,44 @@ export default function DetectionDetail() {
       setCrackType(updated.crack_type);
       setSeverity(updated.severity);
       setImageUrl(updated.image_url ?? '');
+      setSelectedImage(null);
       setWidth(updated.width_mm == null ? '' : String(updated.width_mm));
       setLength(updated.length_mm == null ? '' : String(updated.length_mm));
       setDepth(updated.depth_mm == null ? '' : String(updated.depth_mm));
       setDuplicateOfId(updated.duplicate_of_id ?? '');
+      if (isForwarded && action === 'mark_reviewed') {
+        Alert.alert(
+          'Follow-up review created',
+          'The updated record is back under Ready to forward. Earlier forwarded batches keep their submitted details.',
+        );
+      }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not save this inspection.');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function chooseEvidenceImage() {
+    if (imageUploading || saving) return;
+    setError('');
+    setImageUploading(true);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+      });
+      if (result.canceled || !result.assets[0]) return;
+
+      const asset = result.assets[0];
+      if (asset.fileSize != null && asset.fileSize > 5 * 1024 * 1024) {
+        throw new Error('Image size must be less than 5 MB.');
+      }
+      setSelectedImage(asset);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not upload the selected image.');
+    } finally {
+      setImageUploading(false);
     }
   }
 
@@ -160,8 +202,14 @@ export default function DetectionDetail() {
 
       <Panel>
         <Text style={s.sectionTitle}>Inspector review</Text>
-        {canInspect && !isForwarded ? <>
-          <Text style={s.muted}>Correct the detection fields before marking it reviewed.</Text>
+        {canInspect ? <>
+          <Text style={isForwarded ? s.muted : item.review_state === 'reviewed' ? { color: C.green, fontSize: 14, fontWeight: '700' } : s.muted}>
+            {isForwarded
+              ? 'This detection was forwarded. Save corrections below to create a follow-up review; its earlier submissions remain unchanged.'
+              : item.review_state === 'reviewed'
+              ? 'Reviewed and ready to forward. Save further corrections to keep it reviewed.'
+              : 'Correct the detection fields before marking it reviewed.'}
+          </Text>
           <TextInput accessibilityLabel="Location" style={s.input} placeholder="Location" value={location} onChangeText={setLocation} />
           <View style={s.row}>
             <TextInput accessibilityLabel="Latitude" style={[s.input, { flex: 1 }]} placeholder="Latitude" keyboardType="decimal-pad" value={latitude} onChangeText={setLatitude} />
@@ -171,18 +219,25 @@ export default function DetectionDetail() {
           <View style={styles.options}>{(['transverse', 'longitudinal', 'block', 'corner', 'diagonal', 'meandering', 'reflection', 'pothole'] as Crack['crack_type'][]).map(value => <Option key={value} title={label(value)} selected={crackType === value} onPress={() => setCrackType(value)} />)}</View>
           <Text style={s.muted}>Severity: {label(severity)}</Text>
           <View style={styles.options}>{(['low', 'medium', 'high', 'critical'] as Crack['severity'][]).map(value => <Option key={value} title={label(value)} selected={severity === value} onPress={() => setSeverity(value)} />)}</View>
-          <TextInput accessibilityLabel="Evidence image URL" style={s.input} placeholder="Evidence image HTTPS URL (optional)" autoCapitalize="none" value={imageUrl} onChangeText={setImageUrl} />
+          {selectedImage?.uri || imageUrl.trim() ? <Image source={{ uri: selectedImage?.uri || imageUrl.trim() }} accessibilityLabel="Selected evidence image preview" style={{ width: '100%', height: 180, borderRadius: 10, backgroundColor: '#E6EDF2' }} /> : null}
+          <View style={s.row}>
+            <Pressable accessibilityRole="button" disabled={saving || imageUploading} onPress={() => void chooseEvidenceImage()} style={[s.action, { flex: 1, opacity: saving || imageUploading ? 0.6 : 1 }]}><Text style={s.actionText}>{imageUploading ? 'Opening gallery…' : 'Choose from gallery'}</Text></Pressable>
+            {imageUrl || selectedImage ? <Pressable accessibilityRole="button" disabled={saving || imageUploading} onPress={() => { setImageUrl(''); setSelectedImage(null); }} style={[s.action, { flex: 1, backgroundColor: C.red }]}><Text style={s.actionText}>Remove image</Text></Pressable> : null}
+          </View>
+          <TextInput accessibilityLabel="Evidence image URL" style={s.input} placeholder="Or enter an evidence image HTTPS URL" autoCapitalize="none" value={imageUrl} onChangeText={value => { setImageUrl(value); setSelectedImage(null); }} />
           <View style={s.row}>
             <TextInput accessibilityLabel="Width in millimeters" style={[s.input, { flex: 1 }]} placeholder="Width mm" keyboardType="decimal-pad" value={width} onChangeText={setWidth} />
             <TextInput accessibilityLabel="Length in millimeters" style={[s.input, { flex: 1 }]} placeholder="Length mm" keyboardType="decimal-pad" value={length} onChangeText={setLength} />
             <TextInput accessibilityLabel="Depth in millimeters" style={[s.input, { flex: 1 }]} placeholder="Depth mm" keyboardType="decimal-pad" value={depth} onChangeText={setDepth} />
           </View>
-          <Pressable accessibilityRole="button" disabled={saving} onPress={() => void saveReview('mark_reviewed')} style={[s.action, { opacity: saving ? 0.6 : 1 }]}><Text style={s.actionText}>{saving ? 'Saving…' : 'Save corrections and mark reviewed'}</Text></Pressable>
-          {item.review_state !== 'pending' ? <Pressable accessibilityRole="button" disabled={saving} onPress={() => void saveReview('mark_pending')} style={s.action}><Text style={s.actionText}>Return to pending review</Text></Pressable> : null}
-          <Text style={s.sectionTitle}>Exclude duplicate</Text>
-          <Text style={s.muted}>This hides the record from the forwardable list but keeps it recoverable.</Text>
-          <TextInput accessibilityLabel="Original detection ID" style={s.input} placeholder="Original detection ID" autoCapitalize="none" value={duplicateOfId} onChangeText={setDuplicateOfId} />
-          <Pressable accessibilityRole="button" disabled={saving} onPress={() => Alert.alert('Mark as duplicate?', 'This will exclude the detection from forwarding but keep the record recoverable.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Mark duplicate', style: 'destructive', onPress: () => void saveReview('mark_duplicate') }])} style={[s.action, { backgroundColor: C.red }]}><Text style={s.actionText}>Mark as duplicate</Text></Pressable>
+          <Pressable accessibilityRole="button" disabled={saving || imageUploading} onPress={() => void saveReview('mark_reviewed')} style={[s.action, { opacity: saving || imageUploading ? 0.6 : 1 }]}><Text style={s.actionText}>{saving ? selectedImage ? 'Uploading image and saving…' : 'Saving…' : isForwarded ? 'Save corrections and create follow-up review' : item.review_state === 'reviewed' ? 'Save corrections and keep reviewed' : 'Save corrections and mark reviewed'}</Text></Pressable>
+          {!isForwarded ? <>
+            {item.review_state !== 'pending' ? <Pressable accessibilityRole="button" disabled={saving} onPress={() => void saveReview('mark_pending')} style={s.action}><Text style={s.actionText}>Return to pending review</Text></Pressable> : null}
+            <Text style={s.sectionTitle}>Exclude duplicate</Text>
+            <Text style={s.muted}>This hides the record from the forwardable list but keeps it recoverable.</Text>
+            <TextInput accessibilityLabel="Original detection ID" style={s.input} placeholder="Original detection ID" autoCapitalize="none" value={duplicateOfId} onChangeText={setDuplicateOfId} />
+            <Pressable accessibilityRole="button" disabled={saving} onPress={() => Alert.alert('Mark as duplicate?', 'This will exclude the detection from forwarding but keep the record recoverable.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Mark duplicate', style: 'destructive', onPress: () => void saveReview('mark_duplicate') }])} style={[s.action, { backgroundColor: C.red }]}><Text style={s.actionText}>Mark as duplicate</Text></Pressable>
+          </> : null}
         </> : <Text style={s.muted}>{isForwarded ? 'This record is forwarded and read-only.' : 'Inspector review is available to inspector and admin accounts.'}</Text>}
       </Panel>
 

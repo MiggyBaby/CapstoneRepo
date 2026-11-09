@@ -9,7 +9,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 
 // ===== Cracks API =====
 
-export async function fetchCracks(filters?: CrackFilter & { limit?: number }): Promise<Crack[]> {
+export async function fetchCracks(filters?: CrackFilter & { limit?: number; offset?: number }): Promise<Crack[]> {
   const params = new URLSearchParams();
 
   if (filters?.severity) {
@@ -24,9 +24,12 @@ export async function fetchCracks(filters?: CrackFilter & { limit?: number }): P
   if (filters?.limit) {
     params.append('limit', filters.limit.toString());
   }
+  if (filters?.offset) {
+    params.append('offset', filters.offset.toString());
+  }
 
   const query = params.toString();
-  const response = await fetch(`${API_URL}/cracks${query ? `?${query}` : ''}`);
+  const response = await fetch(`${API_URL}/cracks${query ? `?${query}` : ''}`, { cache: 'no-store' });
 
   if (!response.ok) {
     let message = 'Failed to fetch cracks';
@@ -43,9 +46,19 @@ export async function fetchCracks(filters?: CrackFilter & { limit?: number }): P
   return data.data || [];
 }
 
+export async function fetchAllCracks(): Promise<Crack[]> {
+  const pageSize = 500;
+  const records: Crack[] = [];
+  for (let offset = 0; ; offset += pageSize) {
+    const page = await fetchCracks({ limit: pageSize, offset });
+    records.push(...page);
+    if (page.length < pageSize) return records;
+  }
+}
+
 export async function fetchCrackById(id: string): Promise<Crack> {
   try {
-    const response = await fetch(`${API_URL}/cracks/${id}`);
+    const response = await fetch(`${API_URL}/cracks/${id}`, { cache: 'no-store' });
     if (!response.ok) throw new Error('Failed to fetch crack');
 
     const data = await response.json();
@@ -76,7 +89,7 @@ async function reportRequest<T>(url: string, options?: RequestInit): Promise<T> 
   if (sessionError) throw new Error('Unable to verify your sign-in session. Please sign in again.');
   const headers = new Headers(options?.headers);
   if (session?.access_token) headers.set('Authorization', `Bearer ${session.access_token}`);
-  const response = await fetch(url, { ...options, headers });
+  const response = await fetch(url, { ...options, headers, cache: 'no-store' });
   const result = await response.json();
   if (!response.ok) throw new Error(result?.error || 'Report request failed');
   return result.data as T;
@@ -128,6 +141,10 @@ export interface AnalyticsData {
   lowCracks: number;
   resolvedCracks: number;
   inProgressCracks: number;
+  openCracks: number;
+  averageResolutionHours: number | null;
+  evidenceCracks: number;
+  weeklyTrend: Array<{ date: string; day: string; count: number }>;
   cracksByType: Record<string, number>;
   cracksByStatus: Record<string, number>;
   timestamp: string;
@@ -135,7 +152,7 @@ export interface AnalyticsData {
 
 export async function fetchAnalytics(): Promise<AnalyticsData> {
   try {
-    const response = await fetch(`${API_URL}/analytics`);
+    const response = await fetch(`${API_URL}/analytics`, { cache: 'no-store' });
     if (!response.ok) throw new Error('Failed to fetch analytics');
 
     const data = await response.json();
@@ -172,7 +189,8 @@ export interface HealthStatus {
 
 export async function checkApiHealth(): Promise<HealthStatus> {
   try {
-    const response = await fetch(`${API_URL}/health`);
+    const response = await fetch(`${API_URL}/health`, { cache: 'no-store' });
+    if (!response.ok) throw new Error('Health check failed.');
     const data = await response.json();
     return data;
   } catch (error) {

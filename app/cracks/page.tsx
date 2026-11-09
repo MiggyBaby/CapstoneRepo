@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { FiDownload, FiSearch } from 'react-icons/fi';
+import { useCallback, useEffect, useState } from 'react';
+import { FiDownload, FiRefreshCw, FiSearch } from 'react-icons/fi';
 import CrackCard from '@/components/CrackCard';
 import { Crack, Severity, CrackType } from '@/lib/types';
-import { fetchCracks } from '@/lib/api-client';
+import { fetchAllCracks } from '@/lib/api-client';
 import { DPWH_CRACK_TYPES, getCrackTypeDetails } from '@/lib/crack-types';
+import { useLiveRefresh } from '@/lib/use-live-refresh';
 
 export default function CracksPage() {
   const [cracks, setCracks] = useState<Crack[]>([]);
@@ -13,16 +14,52 @@ export default function CracksPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSeverity, setSelectedSeverity] = useState<Severity | 'all'>('all');
   const [selectedType, setSelectedType] = useState<CrackType | 'all'>('all');
+  const [error, setError] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   const severities: Severity[] = ['low', 'medium', 'high', 'critical'];
   const crackTypes = DPWH_CRACK_TYPES;
 
-  useEffect(() => {
-    fetchCracks()
-      .then((records) => setCracks(records.filter((crack) => DPWH_CRACK_TYPES.includes(crack.crackType))))
-      .catch((error) => console.error('Unable to load cracks from Supabase:', error))
-      .finally(() => setLoading(false));
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setRefreshing(true);
+    try {
+      const records = await fetchAllCracks();
+      setCracks(records.filter((crack) => DPWH_CRACK_TYPES.includes(crack.crackType)));
+      setError('');
+    } catch (cause) {
+      console.error('Unable to load cracks from Supabase:', cause);
+      setError(cause instanceof Error ? cause.message : 'Unable to load detection records.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, []);
+
+  useEffect(() => { void load(); }, [load]);
+  useLiveRefresh(() => { void load(true); });
+
+  function exportFilteredCracks() {
+    const columns = ['id', 'location', 'crackType', 'severity', 'status', 'latitude', 'longitude', 'detectedAt'];
+    const rows = filteredCracks.map(crack => [
+      crack.id,
+      crack.location,
+      crack.crackType,
+      crack.severity,
+      crack.status,
+      crack.coordinates.lat,
+      crack.coordinates.lng,
+      crack.detectedAt,
+    ]);
+    const csv = [columns, ...rows]
+      .map(row => row.map(value => `"${String(value ?? '').replace(/"/g, '""')}"`).join(','))
+      .join('\r\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'road-detections.csv';
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
 
   const filteredCracks = cracks.filter((crack) => {
     const matchesSearch =
@@ -46,11 +83,18 @@ export default function CracksPage() {
             DPWH road defect records: <span className="font-semibold text-primary-600">{cracks.length}</span>
           </p>
         </div>
-        <button className="btn-primary flex items-center space-x-2">
+        <div className="flex items-center gap-2">
+        <button type="button" onClick={() => void load()} disabled={refreshing} className="btn-secondary flex items-center space-x-2 disabled:opacity-60">
+          <FiRefreshCw size={18} className={refreshing ? 'animate-spin' : ''} />
+          <span>Refresh</span>
+        </button>
+        <button type="button" onClick={exportFilteredCracks} disabled={!filteredCracks.length} className="btn-primary flex items-center space-x-2 disabled:opacity-60">
           <FiDownload size={18} />
           <span>Export Report</span>
         </button>
+        </div>
       </div>
+      {error ? <p role="alert" className="border-l-4 border-red-500 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p> : null}
 
       {/* Filters */}
       <div className="card">

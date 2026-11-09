@@ -1,10 +1,11 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { FiPlus, FiSearch, FiEdit2, FiTrash2, FiX, FiFileText } from 'react-icons/fi';
 import { createReport, deleteReport, fetchReports, updateReport } from '@/lib/api-client';
-import { Report } from '@/lib/types';
+import type { Report, ReportDefectCode } from '@/lib/types';
 import { REPORT_DEFECTS } from '@/lib/report-defects';
+import { useLiveRefresh } from '@/lib/use-live-refresh';
 
 type ReportFields = Omit<Report, 'id' | 'createdAt' | 'updatedAt'>;
 type FormFields = Omit<ReportFields, 'estimatedQuantity'> & { estimatedQuantity: string };
@@ -60,7 +61,7 @@ export default function ReportsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState('');
 
-  async function loadReports() {
+  const loadReports = useCallback(async () => {
     setError('');
     try {
       setReports(await fetchReports());
@@ -69,7 +70,7 @@ export default function ReportsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     void loadReports();
@@ -77,7 +78,8 @@ export default function ReportsPage() {
       openCreate();
       window.history.replaceState(null, '', window.location.pathname);
     }
-  }, []);
+  }, [loadReports]);
+  useLiveRefresh(() => { void loadReports(); });
 
   function openCreate() {
     setEditing(null);
